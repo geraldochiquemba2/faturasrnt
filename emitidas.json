@@ -1,0 +1,161 @@
+[
+  {
+    "prestadorNif": "000255073HO034",
+    "numeroFactura": "FT FT3426P10628N/14",
+    "valor": 140318,
+    "data": "2026-07-15",
+    "localPrestacao": "SE Cachiungo",
+    "descricao": "SG. Servicos de limpeza a SE Cachiungo",
+    "timestamp": "2026-07-15T20:07:24.392Z"
+  },
+  {
+    "prestadorNif": "000255073HO034",
+    "numeroFactura": "FT FT3426P10628N/15",
+    "valor": 134194,
+    "data": "2026-07-15",
+    "localPrestacao": "SE Cachiungo",
+    "descricao": "SG. Servicos de limpeza a SE Cachiungo",
+    "timestamp": "2026-07-15T21:26:22.541Z"
+  },
+  {
+    "prestadorNif": "003863014HO037",
+    "numeroFactura": "FT FT3726P7172N/12",
+    "valor": 175123,
+    "data": "2026-07-15",
+    "localPrestacao": "SE Cachiungo",
+    "descricao": "SG. Servicos de limpeza a SE Cachiungo",
+    "timestamp": "2026-07-15T22:39:29.283Z"
+  },
+  {
+    "prestadorNif": "020750724HO052",
+    "numeroFactura": "FT FT5226P10027N/9",
+    "valor": 63812,
+    "data": "2026-07-15",
+    "localPrestacao": "SE Cachiungo",
+    "descricao": "Servicos de limpeza a SE Cachiungo",
+    "timestamp": "2026-07-15T23:04:08.574Z"
+  },
+  {
+    "prestadorNif": "000968836HO032",
+    "numeroFactura": "FT FT3226P10626N/10",
+    "valor": 55714,
+    "data": "2026-07-15",
+    "localPrestacao": "SE Cachiungo",
+    "descricao": "Servicos de limpeza a SE Cachiungo",
+    "timestamp": "2026-07-15T23:08:58.849Z"
+  },
+  {
+    "prestadorNif": "020750724HO052",
+    "numeroFactura": "FT FT5226P10027N/10",
+    "valor": 184896,
+    "data": "2026-07-15",
+    "localPrestacao": "SE Cachiungo",
+    "descricao": "Servicos de limpeza a SE Cachiungo",
+    "timestamp": "2026-07-15T23:52:37.662Z"
+  },
+  {
+    "prestadorNif": "003498353HO034",
+    "numeroFactura": "FT FT3426P7177N/28",
+    "valor": 209680,
+    "data": "2026-07-16",
+    "localPrestacao": "LT Huambo- Cuito",
+    "descricao": "Desmatação da LT Huambo- Cuito",
+    "timestamp": "2026-07-16T01:37:58.846Z"
+  },
+  {
+    "prestadorNif": "003498353HO034",
+    "numeroFactura": "FT FT3426P7177N/29",
+    "valor": 195000,
+    "data": "2026-07-16",
+    "localPrestacao": "LT Huambo- Cuito",
+    "descricao": "Desmatação da LT Huambo- Cuito",
+    "timestamp": "2026-07-16T01:51:35.309Z"
+  },
+  {
+    "prestadorNif": "006925318HO045",
+    "numeroFactura": "FT FT4526P10633N/13",
+    "valor": 1000,
+    "data": "2026-07-15",
+    "localPrestacao": "test",
+    "descricao": "test",
+    "timestamp": "2026-07-16T10:14:57.551Z"
+  },
+  {
+    "prestadorNif": "006925318HO045",
+    "numeroFactura": "FT FT4526P10633N/14",
+    "valor": 2000,
+    "data": "2026-07-15",
+    "localPrestacao": "test",
+    "descricao": "test",
+    "timestamp": "2026-07-16T10:32:56.853Z"
+  },
+  {
+    "prestadorNif": "006925318HO045",
+    "numeroFactura": "FT FT4526P10633N/15",
+    "valor": 100,
+    "data": "2026-07-15",
+    "localPrestacao": "test",
+    "descricao": "test",
+    "timestamp": "2026-07-16T10:43:08.292Z"
+  },
+  {
+    "prestadorNif": "006925318HO045",
+    "numeroFactura": "FT FT4526P10633N/16",
+    "valor": 900,
+    "data": "2026-07-16",
+    "localPrestacao": "SE Belém",
+    "descricao": "G. Limpeza na Belém",
+    "timestamp": "2026-07-16T10:48:09.861Z"
+  },
+  {
+    "prestadorNif": "006925318HO045",
+    "numeroFactura": "FT FT4526P10633N/17",
+    "valor": 50,
+    "data": "2026-07-15",
+    "localPrestacao": "SE Belém",
+    "descricao": "G. Limpeza na Belém",
+    "timestamp": "2026-07-16T11:01:26.358Z"
+  },
+  {
+    "prestadorNif": "003498353HO034",
+    "numeroFactura": "FT FT3426P7177N/30",
+    "valor": 100,
+    "data": "2026-07-16",
+    "localPrestacao": "LT Huambo- Cuito",
+    "descricao": "Desmatação da LT Huambo- Cuito",
+    "pdfPath": "003498353HO034_FT_FT3426P7177N_30.pdf",
+    "timestamp": "2026-07-16T11:55:50.352Z"
+  },
+  {
+    "prestadorNif": "006925318HO045",
+    "numeroFactura": "FT FT4526P10633N/18",
+    "valor": 20,
+    "data": "2026-07-16",
+    "localPrestacao": "SE Belém",
+    "descricao": "G. Limpeza na Belém",
+    "pdfPath": "006925318HO045_FT_FT4526P10633N_18.pdf",
+    "timestamp": "2026-07-16T11:58:51.621Z"
+  },
+  {
+    "prestadorNif": "003498353HO034",
+    "nome": "SILVANO HOSSI LUSSATI",
+    "numeroFactura": "FT FT3426P7177N/31",
+    "valor": 20000,
+    "data": "2026-07-16",
+    "localPrestacao": "LT Huambo- Cuito",
+    "descricao": "Desmatação da LT Huambo- Cuito",
+    "pdfPath": "003498353HO034_FT_FT3426P7177N_31.pdf",
+    "timestamp": "16/07/2026, 20:16:30"
+  },
+  {
+    "prestadorNif": "003498353HO034",
+    "nome": "SILVANO HOSSI LUSSATI",
+    "numeroFactura": "FT FT3426P7177N/32",
+    "valor": 75,
+    "data": "2026-07-16",
+    "localPrestacao": "LT Huambo- Cuito",
+    "descricao": "Desmatação da LT Huambo- Cuito",
+    "pdfPath": "003498353HO034_FT_FT3426P7177N_32.pdf",
+    "timestamp": "16/07/2026, 20:31:04"
+  }
+]

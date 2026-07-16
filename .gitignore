@@ -1,0 +1,6 @@
+node_modules
+dist
+screenshots
+chrome-profile-*
+*.log
+.git

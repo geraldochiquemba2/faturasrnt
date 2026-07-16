@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FATURAÇÃO AUTOMÁTICA</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fb; color: #1e293b; min-height: 100vh; overflow-x: hidden; }
+    html { overflow-x: hidden; }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); color: white; padding: 0 32px; display: flex; justify-content: space-between; align-items: center; height: 60px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+    .header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .header .status { display: flex; gap: 8px; align-items: center; font-size: 13px; background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; }
+    .header .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+    .header .status .dot.orange { background: #f59e0b; }
+    .header .status .dot.red { background: #ef4444; }
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 20px 80px; overflow: visible; }
+    .tabs { display: flex; gap: 0; background: white; border-radius: 12px; padding: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .tab { flex: 1; padding: 12px 16px; cursor: pointer; color: #64748b; font-weight: 500; font-size: 14px; border-radius: 8px; text-align: center; transition: all 0.2s; }
+    .tab.active { background: #0f172a; color: white; font-weight: 600; }
+    .tab:hover:not(.active) { background: #f1f5f9; color: #334155; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .card-title { font-size: 13px; color: #64748b; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .card-title::before { content: ''; width: 3px; height: 14px; background: #3b82f6; border-radius: 2px; }
+    .info-row { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .info-row:last-child { border-bottom: none; }
+    .info-row label { min-width: 80px; font-size: 13px; color: #64748b; font-weight: 500; }
+    .info-row .value { font-size: 14px; font-weight: 500; color: #1e293b; }
+    .btn { padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #0f172a; color: white; }
+    .btn-primary:hover:not(:disabled) { background: #1e293b; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-success:hover:not(:disabled) { background: #15803d; }
+    .btn-outline { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-ghost { background: transparent; color: #64748b; }
+    .btn-ghost:hover { background: #f1f5f9; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 12px; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid #cbd5e1; font-size: 13px; }
+    tr:hover td { background: #f8fafc; }
+    td a { color: #3b82f6; text-decoration: none; font-weight: 500; }
+    td a:hover { text-decoration: underline; }
+    .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
+    .empty-state p { font-size: 14px; }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .config-field { display: flex; flex-direction: column; gap: 6px; }
+    .config-field label { font-size: 13px; font-weight: 500; color: #475569; }
+    .config-field input, .config-field textarea { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; }
+    .config-field input:focus, .config-field textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .config-field.full { grid-column: 1 / -1; }
+    @media (max-width: 640px) {
+      .container { padding: 0 12px; }
+      .tabs { flex-wrap: wrap; }
+      .tab { font-size: 12px; padding: 10px 12px; }
+      .config-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="emitModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;justify-content:center;align-items:center">
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:16px;width:90%;max-width:700px;max-height:80vh;display:flex;flex-direction:column">
+      <div style="padding:20px 24px 12px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="margin:0;color:#e2e8f0;font-size:16px">A processar facturas...</h3>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span id="modalStats" style="font-size:13px;color:#94a3b8"></span>
+          <div class="dot orange" id="modalDot"></div>
+        </div>
+      </div>
+      <div id="modalLog" style="padding:16px 24px;overflow-y:auto;flex:1;font-family:monospace;font-size:12px;line-height:1.8;max-height:55vh"></div>
+      <div style="padding:16px 24px;border-top:1px solid #1e293b;text-align:center">
+        <span id="modalStatus" style="color:#94a3b8;font-size:13px">A aguardar...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="header">
+    <h1>📄 FATURAÇÃO AUTOMÁTICA</h1>
+    <div class="status">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Pronto</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" data-tab="emitir">Emitir</div>
+      <div class="tab" data-tab="historico">Histórico</div>
+    </div>
+    <button class="btn btn-success" id="btnEmitir" onclick="emitir()" style="position:fixed;bottom:0;left:0;right:0;z-index:100;width:100%;padding:14px;font-size:15px;background:#16a34a;border:none;border-radius:0;color:#fff;cursor:pointer;box-shadow:0 -2px 10px rgba(0,0,0,0.3)">
+      ▶ Emitir Facturas Selecionadas
+    </button>
+
+    <!-- TAB: Emitir -->
+    <div class="panel active" id="panel-emitir">
+      <div class="card">
+        <div class="card-title">Facturação</div>
+        <div style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <label style="font-size:12px;color:#1e293b;font-weight:600">Prestadores (NIF) *</label>
+            <button id="btnConfirmNif" onclick="confirmNif()" style="display:none;padding:5px 12px;background:#1e293b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">Confirmar</button>
+          </div>
+          <div id="manualNifWrap" style="position:relative;z-index:1">
+            <div id="manualNifDisplay" onclick="toggleNifDropdown()" style="width:100%;padding:10px;background:#fff;border:1px solid #1e293b;border-radius:8px;color:#1e293b;font-size:13px;margin-top:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:51">
+              <span id="nifDisplayText">Selecionar prestadores...</span>
+              <span style="font-size:10px">▼</span>
+            </div>
+            <div id="manualNifDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #1e293b;border-top:none;border-radius:0 0 8px 8px;z-index:52">
+              <div style="padding:8px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff">
+                <input type="text" id="nifSearch" placeholder="Pesquisar..." oninput="filterNifDropdown()" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;outline:none">
+              </div>
+              <div id="nifDropdownList" style="max-height:200px;overflow-y:auto"></div>
+            </div>
+          </div>
+        </div>
+        <div id="facturaRows">
+          <div id="extractBar" style="display:none;margin-bottom:12px;align-items:center;gap:10px">
+            <label style="font-size:12px;color:#1e293b;font-weight:600">Auto-preencher com factura de referência</label>
+            <input type="file" id="extractFile" accept=".pdf" multiple style="display:none" onchange="extractFromPdf()">
+            <button onclick="document.getElementById('extractFile').click()" style="padding:6px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">📄 Extrair de PDF</button>
+            <span id="extractStatus" style="font-size:11px;color:#64748b"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Histórico -->
+    <div class="panel" id="panel-historico">
+      <div class="card">
+        <div class="card-title">Facturas Emitidas</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <input type="text" id="histSearch" placeholder="Pesquisar por nome, NIF, factura, local..." oninput="filterHistorico()" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+          <input type="date" id="histDateFrom" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+          <input type="date" id="histDateTo" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Prestador</th><th>Nº Factura</th><th>Valor</th><th>Data</th><th>Local</th><th>PDF</th></tr></thead>
+            <tbody id="historicoBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var emitindo = false;
+    var globalConfig = null;
+
+    document.querySelectorAll('.tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+        document.getElementById('btnEmitir').style.display = tab.dataset.tab === 'emitir' ? 'block' : 'none';
+      });
+    });
+
+    var selectedNifs = [];
+
+    function toggleNifDropdown() {
+      var dd = document.getElementById('manualNifDropdown');
+      if (dd.style.display === 'none') {
+        dd.style.display = 'block';
+        document.getElementById('nifSearch').value = '';
+        filterNifDropdown();
+        setTimeout(function() { document.getElementById('nifSearch').focus(); }, 100);
+      } else {
+        dd.style.display = 'none';
+      }
+    }
+
+    function toggleNifItem(nif, nome) {
+      var idx = selectedNifs.findIndex(function(x) { return x.nif === nif; });
+      if (idx >= 0) {
+        selectedNifs.splice(idx, 1);
+      } else {
+        selectedNifs.push({ nif: nif, nome: nome });
+      }
+      updateNifDisplay();
+      updateNifCheckboxes();
+    }
+
+    function removeNif(nif) {
+      var idx = selectedNifs.findIndex(function(x) { return x.nif === nif; });
+      if (idx >= 0) selectedNifs.splice(idx, 1);
+      updateNifDisplay();
+      updateNifCheckboxes();
+      var row = document.getElementById('row-' + nif);
+      if (row) row.remove();
+      var rows = document.querySelectorAll('#facturaRows > div[id^="row-"]');
+      if (rows.length === 0) document.getElementById('extractBar').style.display = 'none';
+    }
+
+    function updateNifDisplay() {
+      var txt = document.getElementById('nifDisplayText');
+      if (selectedNifs.length === 0) {
+        txt.textContent = 'Selecionar prestadores...';
+      } else {
+        txt.textContent = selectedNifs.length + ' prestador(es) selecionado(s)';
+      }
+      document.getElementById('btnConfirmNif').style.display = selectedNifs.length > 0 ? 'block' : 'none';
+    }
+
+    function updateNifCheckboxes() {
+      document.querySelectorAll('#manualNifDropdown .nif-item').forEach(function(item) {
+        var nif = item.getAttribute('data-nif');
+        var cb = item.querySelector('input');
+        cb.checked = selectedNifs.some(function(x) { return x.nif === nif; });
+      });
+    }
+
+    function confirmNif() {
+      document.getElementById('manualNifDropdown').style.display = 'none';
+      document.getElementById('extractBar').style.display = 'flex';
+      var container = document.getElementById('facturaRows');
+      var extractBar = document.getElementById('extractBar');
+      container.innerHTML = '';
+      container.appendChild(extractBar);
+      var today = '';
+      selectedNifs.forEach(function(p, i) {
+        var card = document.createElement('div');
+        card.id = 'row-' + p.nif;
+        card.style.cssText = 'background:#fff;border:2px solid #1e293b;border-radius:10px;padding:14px;margin-bottom:10px';
+        card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:600;color:#1e293b">' + p.nome + ' (' + p.nif + ')</div><button onclick="removeNif(\'' + p.nif + '\')" style="padding:4px 10px;background:#fee2e2;color:#ef4444;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer">✕ Remover</button></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+            '<div><label style="font-size:11px;color:#475569">Descrição *</label><input type="text" class="row-desc" data-nif="' + p.nif + '" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
+            '<div><label style="font-size:11px;color:#475569">Local *</label><input type="text" class="row-local" data-nif="' + p.nif + '" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
+            '<div><label style="font-size:11px;color:#475569">Valor (AKZ) *</label><input type="text" class="row-valor" data-nif="' + p.nif + '" value="" placeholder="0,00" onkeydown="handleValorKeydown(event)" onblur="handleValorBlur(this)" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
+            '<div><label style="font-size:11px;color:#475569">Quantidade</label><input type="number" class="row-qtd" data-nif="' + p.nif + '" value="1" min="1" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
+            '<div><label style="font-size:11px;color:#475569">Data</label><input type="date" class="row-data" data-nif="' + p.nif + '" value="' + today + '" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
+          '</div>';
+        container.appendChild(card);
+      });
+    }
+
+    function handleValorKeydown(e) {
+      var allowed = /^\d$|Backspace|Delete|Tab|Arrow|Home|End|Enter/;
+      if (!allowed.test(e.key) && !e.ctrlKey && !e.metaKey) e.preventDefault();
+    }
+    function handleValorBlur(el) {
+      var digits = el.value.replace(/\D/g, '');
+      el.value = digits ? digits + ',00' : '';
+    }
+
+    function extractFromPdf() {
+      var fileInput = document.getElementById('extractFile');
+      var files = Array.from(fileInput.files);
+      if (files.length === 0) return;
+
+      var status = document.getElementById('extractStatus');
+      status.textContent = 'A processar ' + files.length + ' factura(s)...';
+      status.style.color = '#3b82f6';
+
+      var pending = files.length;
+      var matched = 0;
+
+      files.forEach(function(file) {
+        var reader = new FileReader();
+        reader.onload = function() {
+          var base64 = reader.result.split(',')[1];
+          fetch('/api/extract-single', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pdfBase64: base64, prestadores: selectedNifs.map(function(x) { return x.nif; }) })
+          }).then(function(r) { return r.json(); }).then(function(data) {
+            if (!data.error && data.nifMatch) {
+              var row = document.getElementById('row-' + data.nifMatch);
+              if (row) {
+                if (data.localPrestacao) row.querySelector('.row-local').value = data.localPrestacao;
+                if (data.descricao) row.querySelector('.row-desc').value = data.descricao;
+                if (data.quantidade) row.querySelector('.row-qtd').value = data.quantidade;
+                row.style.borderColor = '#22c55e';
+                setTimeout(function() { row.style.borderColor = '#1e293b'; }, 2000);
+              }
+              matched++;
+            }
+            pending--;
+            if (pending === 0) {
+              status.textContent = '✓ ' + matched + ' de ' + files.length + ' factura(s) preenchida(s)';
+              status.style.color = matched > 0 ? '#16a34a' : '#ef4444';
+              fileInput.value = '';
+            }
+          }).catch(function() {
+            pending--;
+            if (pending === 0) {
+              status.textContent = '✓ ' + matched + ' de ' + files.length + ' factura(s) preenchida(s)';
+              status.style.color = matched > 0 ? '#16a34a' : '#ef4444';
+              fileInput.value = '';
+            }
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.addEventListener('click', function(e) {
+      var wrap = document.getElementById('manualNifWrap');
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('manualNifDropdown').style.display = 'none';
+      }
+    });
+
+    function filterNifDropdown() {
+      var term = document.getElementById('nifSearch').value.toLowerCase();
+      document.querySelectorAll('#nifDropdownList .nif-item').forEach(function(item) {
+        var nif = item.getAttribute('data-nif');
+        var isSelected = selectedNifs.some(function(x) { return x.nif === nif; });
+        if (isSelected) {
+          item.style.display = 'flex';
+        } else {
+          var text = item.textContent.toLowerCase();
+          item.style.display = text.includes(term) ? 'flex' : 'none';
+        }
+      });
+    }
+
+    function loadPrestadores() {
+      fetch('/api/config').then(function(r) { return r.json(); }).then(function(config) {
+        globalConfig = config;
+        if (config.groqApiKey) {
+          document.getElementById('groqKey').value = config.groqApiKey;
+        }
+        var dd = document.getElementById('nifDropdownList');
+        dd.innerHTML = '';
+        config.prestadores.forEach(function(p) {
+          var displayName = p.nome || p.nif;
+          var item = document.createElement('div');
+          item.className = 'nif-item';
+          item.setAttribute('data-nif', p.nif);
+          item.style.cssText = 'padding:10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px';
+          item.innerHTML = '<input type="checkbox" style="width:16px;height:16px;accent-color:#1e293b;cursor:pointer;pointer-events:none">' +
+            '<span>' + displayName + ' (' + p.nif + ')</span>';
+          item.onmouseenter = function() { item.style.background = '#f1f5f9'; };
+          item.onmouseleave = function() { item.style.background = '#fff'; };
+          item.onclick = function() { toggleNifItem(p.nif, displayName); };
+          dd.appendChild(item);
+        });
+      });
+    }
+
+    function emitir() {
+      if (emitindo) return;
+
+      var rows = document.querySelectorAll('#facturaRows > div[id^="row-"]');
+      if (rows.length === 0) {
+        alert('Selecione pelo menos um prestador e confirme');
+        return;
+      }
+
+      var validFacturas = [];
+      var missing = false;
+      rows.forEach(function(row) {
+        var nif = row.querySelector('.row-desc').getAttribute('data-nif');
+        var desc = row.querySelector('.row-desc').value.trim();
+        var local = row.querySelector('.row-local').value.trim();
+        var valor = row.querySelector('.row-valor').value;
+        var qtd = row.querySelector('.row-qtd').value;
+        var data = row.querySelector('.row-data').value;
+        if (!desc || !local || !valor) {
+          missing = true;
+          return;
+        }
+        var p = globalConfig.prestadores.find(function(x) { return x.nif === nif; });
+        validFacturas.push({
+          nif: nif,
+          nome: p ? p.nome : nif,
+          local: local,
+          descricao: desc,
+          tipo: 'Prestação de serviço (geral)',
+          valor: Math.round(parseFloat(valor.replace(',', '.'))),
+          quantidade: parseInt(qtd) || 1,
+          dataEmissao: data,
+          numeroFactura: '',
+          matched: true
+        });
+      });
+
+      if (missing) {
+        alert('Preencha todos os campos obrigatórios (Descrição, Local, Valor) em cada linha');
+        return;
+      }
+
+      emitindo = true;
+      var totalFacturas = validFacturas.length;
+      var emitidasCount = 0;
+      var errosCount = 0;
+
+      // Mostrar modal
+      var modal = document.getElementById('emitModal');
+      modal.style.display = 'flex';
+      document.getElementById('modalLog').innerHTML = '';
+      document.getElementById('modalDot').className = 'dot orange';
+      document.getElementById('modalStatus').textContent = 'A aguardar início...';
+      document.getElementById('modalStats').textContent = '0 / ' + totalFacturas;
+
+      function addModalLog(text, type) {
+        var el = document.createElement('div');
+        el.style.color = type === 'ok' ? '#4ade80' : type === 'err' ? '#f87171' : '#94a3b8';
+        el.textContent = text;
+        document.getElementById('modalLog').appendChild(el);
+        document.getElementById('modalLog').scrollTop = document.getElementById('modalLog').scrollHeight;
+      }
+
+      addModalLog('Início: ' + totalFacturas + ' facturas a emitir', 'info');
+
+      document.getElementById('btnEmitir').disabled = true;
+
+      fetch('/api/emitir-facturas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ facturas: validFacturas, notas: '' })
+      }).then(function(res) {
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+
+        function read() {
+          reader.read().then(function(result) {
+            if (result.done) return;
+            var lines = decoder.decode(result.value).split('\n').filter(function(l) { return l.trim(); });
+            lines.forEach(function(line) {
+              try {
+                var msg = JSON.parse(line);
+                addModalLog(msg.text, msg.type);
+                document.getElementById('modalStats').textContent = emitidasCount + ' / ' + totalFacturas;
+                if (msg.type === 'ok') { emitidasCount++; }
+                if (msg.type === 'err') { errosCount++; }
+                if (msg.done) {
+                  emitindo = false;
+                  document.getElementById('btnEmitir').disabled = false;
+                  document.getElementById('statusDot').className = 'dot';
+                  document.getElementById('statusText').textContent = 'Concluído';
+                  document.getElementById('modalDot').className = 'dot';
+                  document.getElementById('modalStatus').textContent = 'Concluído! A redirecionar...';
+                  loadHistorico();
+                  loadPrestadores();
+                  setTimeout(function() {
+                    modal.style.display = 'none';
+                    document.querySelector('[data-tab="historico"]').click();
+                  }, 1500);
+                }
+              } catch(e) {}
+            });
+            read();
+          });
+        }
+        read();
+      });
+    }
+
+    var allLogs = [];
+
+    function loadHistorico() {
+      fetch('/api/logs').then(function(r) { return r.json(); }).then(function(logs) {
+        allLogs = logs.reverse();
+        renderHistorico(allLogs);
+      });
+    }
+
+    function renderHistorico(logs) {
+      var tbody = document.getElementById('historicoBody');
+      if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>Nenhuma factura encontrada</p></td></tr>';
+        return;
+      }
+      tbody.innerHTML = logs.map(function(l) {
+        var safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
+        var nome = l.nome || '';
+        if (!nome && globalConfig) {
+          var p = globalConfig.prestadores.find(function(x) { return x.nif === l.prestadorNif; });
+          if (p) nome = p.nome;
+        }
+        var hora = '';
+        if (l.timestamp) {
+          var parts = l.timestamp.split(',');
+          if (parts.length >= 2) {
+            hora = parts[1].trim().substring(0, 5);
+          } else {
+            var d = new Date(l.timestamp);
+            hora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+          }
+        }
+        return '<tr><td><strong>' + (nome || l.prestadorNif) + '</strong><br><span style="color:#94a3b8;font-size:11px">' + l.prestadorNif + '</span></td>' +
+          '<td style="font-family:monospace;font-size:12px">' + l.numeroFactura + '</td>' +
+          '<td>' + (l.valor ? l.valor.toLocaleString('pt') : 0) + ' Kz</td>' +
+          '<td>' + l.data + '<br><span style="color:#94a3b8;font-size:11px">' + hora + '</span></td>' +
+          '<td>' + (l.localPrestacao || '-') + '</td>' +
+          '<td style="white-space:nowrap"><a href="/api/pdf/' + l.prestadorNif + '/' + safeNum + '" target="_blank" style="color:#3b82f6;text-decoration:none;font-weight:500">Ver</a>' +
+          (l.pdfPath ? ' <a href="/api/pdf/' + l.prestadorNif + '/' + safeNum + '" download="' + (l.pdfPath || '') + '" style="display:inline-block;padding:3px 8px;background:#16a34a;color:#fff;border-radius:4px;font-size:11px;font-weight:600;text-decoration:none;margin-left:6px">Baixar</a>' : '') +
+          '</td></tr>';
+      }).join('');
+    }
+
+    function filterHistorico() {
+      var term = document.getElementById('histSearch').value.toLowerCase();
+      var dateFrom = document.getElementById('histDateFrom').value;
+      var dateTo = document.getElementById('histDateTo').value;
+      var filtered = allLogs.filter(function(l) {
+        var nome = l.nome || '';
+        if (!nome && globalConfig) {
+          var p = globalConfig.prestadores.find(function(x) { return x.nif === l.prestadorNif; });
+          if (p) nome = p.nome;
+        }
+        var searchable = (nome + ' ' + l.prestadorNif + ' ' + l.numeroFactura + ' ' + (l.localPrestacao || '')).toLowerCase();
+        if (term && searchable.indexOf(term) === -1) return false;
+        if (dateFrom && l.data < dateFrom) return false;
+        if (dateTo && l.data > dateTo) return false;
+        return true;
+      });
+      renderHistorico(filtered);
+    }
+
+    function downloadAllPdfs() {
+      var filtered = allLogs.filter(function(l) { return l.pdfPath; });
+      if (filtered.length === 0) { alert('Nenhum PDF para baixar'); return; }
+      filtered.forEach(function(l) {
+        var safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
+        var a = document.createElement('a');
+        a.href = '/api/pdf/' + l.prestadorNif + '/' + safeNum;
+        a.download = l.pdfPath || '';
+        a.click();
+      });
+    }
+
+    function saveConfig() {
+      fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groqApiKey: document.getElementById('groqKey').value,
+          chromePath: document.getElementById('chromePath').value,
+          valorMinimo: parseInt(document.getElementById('valorMin').value),
+          valorMaximo: parseInt(document.getElementById('valorMax').value)
+        })
+      }).then(function() { alert('Configurações guardadas!'); });
+    }
+
+    loadPrestadores();
+    loadHistorico();
+
+    // Limpar campo de pesquisa no arranque
+    var searchEl = document.getElementById('searchPrestador');
+    if (searchEl) { searchEl.value = ''; searchEl.removeAttribute('value'); }
+  </script>
+</body>
+</html>

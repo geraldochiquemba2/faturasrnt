@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: faturacao-automatica
+    runtime: docker
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+    plan: free
