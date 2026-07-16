@@ -870,7 +870,7 @@ async function main() {
 
   const browser = await puppeteer.launch({
     executablePath: chromePath,
-    headless: 'new',
+    headless: 'new' as any,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

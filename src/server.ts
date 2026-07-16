@@ -493,6 +493,5 @@ app.post('/api/emitir', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Servidor iniciado em http://localhost:${PORT}\n`);
 });
-});
 
 export default app;
