@@ -180,17 +180,25 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
       try { await page.screenshot({ path: `screenshots/login_${nif}_attempt${attempt}.png`, fullPage: true }); } catch { /* ignore */ }
 
       console.log(`[${nif}] Looking for Portal do Contribuinte button...`);
-      await page.evaluate(() => {
-        const btns = Array.from(document.querySelectorAll('button'));
-        const portalBtn = btns.find(b => b.textContent?.includes('Portal do Contribuinte'));
-        if (portalBtn) (portalBtn as HTMLElement).click();
-      });
-      console.log(`[${nif}] Portal do Contribuinte clicked`);
-      await sleep(2000);
-      console.log(`[${nif}] sleep done, taking screenshot...`);
+      try {
+        await page.waitForSelector('button', { timeout: 5000 });
+        const clicked = await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button'));
+          const portalBtn = btns.find(b => b.textContent?.includes('Portal do Contribuinte'));
+          if (portalBtn) { (portalBtn as HTMLElement).click(); return true; }
+          return false;
+        });
+        console.log(`[${nif}] Portal do Contribuinte clicked: ${clicked}`);
+      } catch (e: any) {
+        console.log(`[${nif}] Portal click error: ${e.message}`);
+      }
+
+      try { await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {}); } catch {}
+      await sleep(3000);
+      console.log(`[${nif}] After portal wait...`);
 
       // Screenshot após clicar "Portal do Contribuinte"
-      await page.screenshot({ path: `screenshots/login_${nif}_portal${attempt}.png`, fullPage: true });
+      try { await page.screenshot({ path: `screenshots/login_${nif}_portal${attempt}.png`, fullPage: true }); } catch {}
       console.log(`[${nif}] screenshot done, looking for NIF input...`);
 
       const nifInput = await page.$('input[type="text"], input[type="number"]');
