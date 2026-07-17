@@ -76,7 +76,7 @@ async function loadConfigWithPasswords(): Promise<Config> {
   try {
     const http = require('http');
     const data = await new Promise<string>((resolve, reject) => {
-      http.get(`http://127.0.0.1:${port}/api/config`, (res: any) => {
+      http.get(`http://127.0.0.1:${port}/api/internal/config`, (res: any) => {
         let body = '';
         res.on('data', (c: Buffer) => { body += c; });
         res.on('end', () => resolve(body));

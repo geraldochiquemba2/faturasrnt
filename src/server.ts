@@ -216,6 +216,15 @@ app.get('/api/config', (req, res) => {
   res.json(safeConfig);
 });
 
+// Internal endpoint - só localhost (para o child process index.ts)
+app.get('/api/internal/config', (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || '';
+  if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('localhost')) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  res.json(getConfig());
+});
+
 app.post('/api/config', async (req, res) => {
   await saveConfig(req.body);
   res.json({ success: true });
