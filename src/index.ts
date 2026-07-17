@@ -813,26 +813,25 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     });
-    await sleep(1500);
+    await sleep(2500);
     await page.screenshot({ path: `screenshots/${prestador.nif}_documento.png`, fullPage: true });
 
-    // Procurar botão de download no modal (ícone de seta para baixo)
+    // Procurar botão de download no modal
     const downloadClicked = await page.evaluate(() => {
-      // Procurar botões no modal/dialog
-      const btns = document.querySelectorAll('button, a, span[role="button"]');
-      for (const btn of Array.from(btns)) {
+      // 1. Procurar por botões com ícone de download (SVG com path de seta para baixo)
+      const allBtns = document.querySelectorAll('button');
+      const actionBtns: { el: HTMLElement; x: number; y: number }[] = [];
+      for (const btn of Array.from(allBtns)) {
         const rect = (btn as HTMLElement).getBoundingClientRect();
-        // Botão de download está no topo direito do modal (y < 120, x > 600)
-        if (rect.width > 0 && rect.width < 80 && rect.y < 120 && rect.x > 600) {
-          const hasDownloadIcon = btn.querySelector('i[class*="download"], svg, img') || 
-                                   btn.className?.includes('download') ||
-                                   (btn as HTMLElement).title?.toLowerCase().includes('download') ||
-                                   (btn as HTMLElement).title?.toLowerCase().includes('baixar');
-          if (hasDownloadIcon || rect.x > 700) {
-            (btn as HTMLElement).click();
-            return true;
-          }
+        if (rect.width > 0 && rect.width < 100 && rect.y > 0 && rect.y < 200 && rect.x > 800) {
+          actionBtns.push({ el: btn as HTMLElement, x: rect.x, y: rect.y });
         }
+      }
+      // Ordenar por x (menor = mais à esquerda = download)
+      actionBtns.sort((a, b) => a.x - b.x);
+      if (actionBtns.length > 0) {
+        actionBtns[0].el.click();
+        return true;
       }
       return false;
     });
