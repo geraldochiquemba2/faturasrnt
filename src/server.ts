@@ -135,9 +135,9 @@ app.post('/api/logs', async (req, res) => {
       [l.prestadorNif, l.nome, l.numeroFactura, l.valor, l.data, l.localPrestacao, l.descricao, l.pdfPath, pdfUrl, l.timestamp]
     );
     res.json({ success: true, pdfUrl });
-  } catch (e) {
-    console.error('Erro ao guardar log:', e);
-    res.status(500).json({ error: 'Erro ao guardar' });
+  } catch (e: any) {
+    console.error('Erro ao guardar log:', e.message || e);
+    res.status(500).json({ error: 'Erro ao guardar', detail: e.message || String(e) });
   }
 });
 
@@ -573,8 +573,15 @@ app.post('/api/emitir', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 Servidor iniciado em http://localhost:${PORT}\n`);
+initDB().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 Servidor iniciado em http://localhost:${PORT}\n`);
+  });
+}).catch((e) => {
+  console.error('Erro ao iniciar DB:', e);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 Servidor iniciado (sem DB) em http://localhost:${PORT}\n`);
+  });
 });
 
 export default app;
