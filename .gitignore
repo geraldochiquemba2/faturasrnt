@@ -2,5 +2,6 @@ node_modules
 dist
 screenshots
 chrome-profile-*
+.env
 *.log
 .git
