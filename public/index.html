@@ -60,6 +60,8 @@
       .tab { font-size: 12px; padding: 10px 12px; }
       .config-grid { grid-template-columns: 1fr; }
     }
+    input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; position: absolute; right: 0; top: 0; width: 30px; height: 100%; cursor: pointer; }
+    input[type="date"] { -webkit-appearance: none; }
   </style>
 </head>
 <body>
@@ -136,8 +138,8 @@
           <div class="card-title">Facturas Emitidas</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <input type="text" id="histSearch" placeholder="Pesquisar por nome, NIF, factura, local..." oninput="filterHistorico()" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
-            <div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px">De:</span><input type="date" id="histDateFrom" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"></div>
-            <div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px">Até:</span><input type="date" id="histDateTo" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"></div>
+            <div style="display:flex;align-items:center;gap:6px"><label style="font-size:12px;color:#475569;font-weight:500">De:</label><div style="position:relative"><input type="date" id="histDateFrom" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;width:140px"><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:14px">📅</span></div></div>
+            <div style="display:flex;align-items:center;gap:6px"><label style="font-size:12px;color:#475569;font-weight:500">Até:</label><div style="position:relative"><input type="date" id="histDateTo" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;width:140px"><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:14px">📅</span></div></div>
             <button onclick="downloadSelected()" style="padding:9px 16px;background:#1e293b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Baixar selecionadas</button>
           </div>
         </div>
