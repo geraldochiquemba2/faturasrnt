@@ -71,6 +71,10 @@ function saveLog(log: FacturaEmitida[]): void {
       path: '/api/logs',
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }
+    }, (res: any) => {
+      let body = '';
+      res.on('data', (c: Buffer) => { body += c; });
+      res.on('end', () => { console.log(`[${entry.prestadorNif}] Log guardado: ${body}`); });
     });
     req.on('error', (e: any) => console.error('Erro ao guardar log:', e.message));
     req.write(data);
@@ -911,7 +915,7 @@ async function main() {
     const resultado = await emitirFactura(browser, config, p, i + 1);
     if (resultado) {
       log.push(resultado);
-      saveLog(log);
+      saveLog([resultado]);
     }
     await sleep(1000);
   }
