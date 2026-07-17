@@ -54,6 +54,38 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS prestadores (
+        nif TEXT PRIMARY KEY,
+        password TEXT NOT NULL,
+        nome TEXT
+      )
+    `);
+
+    const existing = await pool.query('SELECT COUNT(*) FROM prestadores');
+    if (parseInt(existing.rows[0].count) === 0) {
+      const prestadores = [
+        { nif: '000255073HO034', password: 'sUcThwHXTD', nome: 'ELIAS MANUEL SONGO' },
+        { nif: '000968836HO032', password: '1IRbgqa1mE', nome: 'JOAO MARCELO CHICUAMANGA' },
+        { nif: '002844805HO037', password: 'UHmRfqsCP7', nome: 'ALDA NACANJAMBA GONGA' },
+        { nif: '003498353HO034', password: 'adNKlkHMMX', nome: 'SILVANO HOSSI LUSSATI' },
+        { nif: '003863014HO037', password: 'it2uiaVDFd', nome: 'VICTORINO TCHINDUMBO' },
+        { nif: '005565221HO046', password: 'w3nVZjsHwy', nome: 'ALZIRA NACALEMBE PEDRO' },
+        { nif: '005659634BE040', password: 'WsLHEXwPrX', nome: 'TIAGO CACUPA' },
+        { nif: '006096198LA040', password: 'xu3NUlfEcL', nome: 'JANDIRA ANTONIO SANDALA' },
+        { nif: '006925318HO045', password: 'reXJ04G00Z', nome: 'CELINA CHAMILE CHIMUCO' },
+        { nif: '010052877BE046', password: 'ChN9LT8iNe', nome: 'EDUARDO JAMBA DEMBUE DULO' },
+        { nif: '020105623BE057', password: 'oetfMcHgBG', nome: 'JOAO CACUMBA AUGUSTA AGOSTINHO' },
+        { nif: '020750724HO052', password: 'IanfTer0Ap', nome: 'MATEUS CASSELA SAMBA' },
+        { nif: '021453297HO055', password: '2RiiV8U9rM', nome: 'ISABEL EKAVO CANJAMBA' },
+      ];
+      for (const p of prestadores) {
+        await pool.query('INSERT INTO prestadores (nif, password, nome) VALUES ($1, $2, $3)', [p.nif, p.password, p.nome]);
+      }
+      console.log('✓ 13 prestadores inseridos na base de dados');
+    }
+
     console.log('✓ Base de dados Neon inicializada');
   } catch (e) {
     console.error('Erro ao inicializar Neon:', e);
@@ -71,22 +103,31 @@ function saveLogLocal(entry: any) {
   writeFileSync(LOGS_PATH, JSON.stringify(logs, null, 2));
 }
 
+// Cached prestadores from DB
+let cachedPrestadores: { nif: string; password: string; nome: string }[] = [];
+
+async function loadPrestadoresFromDB() {
+  if (!pool) return;
+  try {
+    const result = await pool.query('SELECT nif, password, nome FROM prestadores');
+    cachedPrestadores = result.rows;
+    console.log(`✓ ${cachedPrestadores.length} prestadores carregados da base de dados`);
+  } catch (e) {
+    console.error('Erro ao carregar prestadores:', e);
+  }
+}
+
 // Read config
 function getConfig() {
   if (!existsSync(CONFIG_PATH)) return { prestadores: [], adquirente: {} };
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
 
-  // Merge passwords from env var: PRESTADORES_PASSWORDS=000255073HO034:sUcThwHXTD,...
-  if (process.env.PRESTADORES_PASSWORDS) {
-    const pwMap: Record<string, string> = {};
-    process.env.PRESTADORES_PASSWORDS.split(',').forEach((entry: string) => {
-      const [nif, pw] = entry.split(':');
-      if (nif && pw) pwMap[nif] = pw;
+  // Merge passwords from DB cache
+  if (cachedPrestadores.length > 0) {
+    config.prestadores = config.prestadores.map((p: any) => {
+      const dbP = cachedPrestadores.find((x) => x.nif === p.nif);
+      return { ...p, password: dbP ? dbP.password : '' };
     });
-    config.prestadores = config.prestadores.map((p: any) => ({
-      ...p,
-      password: pwMap[p.nif] || ''
-    }));
   }
 
   // groqApiKey from env var
@@ -599,7 +640,7 @@ app.post('/api/emitir', async (req, res) => {
 });
 
 // Start server
-initDB().then(() => {
+initDB().then(() => loadPrestadoresFromDB()).then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Servidor iniciado em http://localhost:${PORT}\n`);
   });

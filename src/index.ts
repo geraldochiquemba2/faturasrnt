@@ -55,22 +55,33 @@ interface FacturaEmitida {
 function loadConfig(): Config {
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
 
-  // Merge passwords from env var: PRESTADORES_PASSWORDS=000255073HO034:sUcThwHXTD,...
-  if (process.env.PRESTADORES_PASSWORDS) {
-    const pwMap: Record<string, string> = {};
-    process.env.PRESTADORES_PASSWORDS.split(',').forEach((entry: string) => {
-      const [nif, pw] = entry.split(':');
-      if (nif && pw) pwMap[nif] = pw;
-    });
-    config.prestadores = config.prestadores.map((p: any) => ({
-      ...p,
-      password: pwMap[p.nif] || ''
-    }));
-  }
-
   // groqApiKey from env var
   if (process.env.GROQ_API_KEY) {
     config.groqApiKey = process.env.GROQ_API_KEY;
+  }
+
+  return config;
+}
+
+async function loadConfigWithPasswords(): Promise<Config> {
+  const config = loadConfig();
+  const port = process.env.PORT || 3000;
+
+  try {
+    const http = require('http');
+    const data = await new Promise<string>((resolve, reject) => {
+      http.get(`http://127.0.0.1:${port}/api/config`, (res: any) => {
+        let body = '';
+        res.on('data', (c: Buffer) => { body += c; });
+        res.on('end', () => resolve(body));
+      }).on('error', reject);
+    });
+    const remote = JSON.parse(data);
+    if (remote.prestadores && remote.prestadores.length > 0) {
+      config.prestadores = remote.prestadores;
+    }
+  } catch (e) {
+    console.log('[index] Sem acesso ao servidor, a usar config.json local');
   }
 
   return config;
@@ -890,7 +901,7 @@ async function main() {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   }
 
-  const config = loadConfig();
+  const config = await loadConfigWithPasswords();
   const log = loadLog();
 
   console.log('=========================================');
