@@ -50,10 +50,16 @@ async function initDB() {
         descricao TEXT,
         pdf_path TEXT,
         pdf_url TEXT,
+        pdf_data TEXT,
         timestamp TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // Adicionar coluna pdf_data se não existir
+    try {
+      await pool.query("ALTER TABLE emitidas ADD COLUMN IF NOT EXISTS pdf_data TEXT");
+    } catch (e) {}
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS prestadores (
@@ -251,9 +257,9 @@ app.post('/api/logs', async (req, res) => {
   }
   try {
     await pool.query(
-      `INSERT INTO emitidas (prestador_nif, nome, numero_factura, valor, data, local_prestacao, descricao, pdf_path, pdf_url, timestamp)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [l.prestadorNif, l.nome, l.numeroFactura, l.valor, l.data, l.localPrestacao, l.descricao, l.pdfPath, pdfUrl, l.timestamp]
+      `INSERT INTO emitidas (prestador_nif, nome, numero_factura, valor, data, local_prestacao, descricao, pdf_path, pdf_url, pdf_data, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [l.prestadorNif, l.nome, l.numeroFactura, l.valor, l.data, l.localPrestacao, l.descricao, l.pdfPath, pdfUrl, l.pdfData || null, l.timestamp]
     );
     res.json({ success: true, pdfUrl });
   } catch (e: any) {
@@ -262,7 +268,26 @@ app.post('/api/logs', async (req, res) => {
   }
 });
 
-app.get('/api/pdf/:nif/:numero', (req, res) => {
+app.get('/api/pdf/:nif/:numero', async (req, res) => {
+  // Try DB first
+  if (pool) {
+    try {
+      const safeNum = req.params.numero.replace(/[^a-zA-Z0-9]/g, '_');
+      const result = await pool.query(
+        'SELECT pdf_data FROM emitidas WHERE prestador_nif = $1 AND REPLACE(REPLACE(REPLACE(REPLACE(numero_factura, \'-\', \'\'), \'.\', \'\'), \'/\', \'\'), \' \', \'\') = $2 AND pdf_data IS NOT NULL ORDER BY id DESC LIMIT 1',
+        [req.params.nif, safeNum]
+      );
+      if (result.rows[0]?.pdf_data) {
+        const pdfBuffer = Buffer.from(result.rows[0].pdf_data, 'base64');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+        return res.send(pdfBuffer);
+      }
+    } catch (e) {
+      console.error('Erro ao buscar PDF da DB:', e);
+    }
+  }
+  // Fallback to filesystem
   const downloadsDir = join(__dirname, '..', 'downloads');
   if (!existsSync(downloadsDir)) return res.status(404).json({ error: 'PDF not found' });
   

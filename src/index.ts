@@ -103,7 +103,15 @@ function saveLog(log: FacturaEmitida[]): void {
   const http = require('http');
   const port = process.env.PORT || 3000;
   for (const entry of log) {
-    const data = JSON.stringify(entry);
+    let pdfData: string | null = null;
+    if (entry.pdfPath) {
+      const pdfFull = path.join(DOWNLOAD_DIR, entry.pdfPath);
+      if (fs.existsSync(pdfFull)) {
+        pdfData = fs.readFileSync(pdfFull).toString('base64');
+      }
+    }
+    const payload = { ...entry, pdfData };
+    const data = JSON.stringify(payload);
     const req = http.request({
       hostname: '127.0.0.1',
       port,
