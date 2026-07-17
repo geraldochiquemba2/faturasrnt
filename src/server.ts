@@ -366,7 +366,7 @@ app.get('/api/download/:nif/:numero', async (req, res) => {
 
   const nome = req.query.nome || req.params.nif;
   const fileName = nome + '_' + req.params.numero + '.pdf';
-  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Type', 'application/octet-stream');
   res.setHeader('Content-Disposition', 'attachment; filename="' + fileName + '"');
   res.send(pdfBuffer);
 });
