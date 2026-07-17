@@ -57,12 +57,25 @@ function loadConfig(): Config {
 }
 
 function loadLog(): FacturaEmitida[] {
-  if (!fs.existsSync(LOG_PATH)) return [];
-  return JSON.parse(fs.readFileSync(LOG_PATH, 'utf-8'));
+  return [];
 }
 
 function saveLog(log: FacturaEmitida[]): void {
-  fs.writeFileSync(LOG_PATH, JSON.stringify(log, null, 2));
+  const http = require('http');
+  const port = process.env.PORT || 3000;
+  for (const entry of log) {
+    const data = JSON.stringify(entry);
+    const req = http.request({
+      hostname: '127.0.0.1',
+      port,
+      path: '/api/logs',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }
+    });
+    req.on('error', (e: any) => console.error('Erro ao guardar log:', e.message));
+    req.write(data);
+    req.end();
+  }
 }
 
 function sleep(ms: number): Promise<void> {

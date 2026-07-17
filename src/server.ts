@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join } from 'path';
 import { exec } from 'child_process';
 import https from 'https';
+import { Pool } from 'pg';
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -23,7 +24,31 @@ app.use((req, res, next) => {
 app.use(express.static(join(__dirname, '..', 'public')));
 
 const CONFIG_PATH = join(__dirname, '..', 'config.json');
-const LOGS_PATH = join(__dirname, '..', 'emitidas.json');
+
+// Neon PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined
+});
+
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS emitidas (
+      id SERIAL PRIMARY KEY,
+      prestador_nif TEXT NOT NULL,
+      nome TEXT,
+      numero_factura TEXT,
+      valor REAL,
+      data TEXT,
+      local_prestacao TEXT,
+      descricao TEXT,
+      pdf_path TEXT,
+      timestamp TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  console.log('✓ Base de dados inicializada');
+}
 
 // Read config
 function getConfig() {
@@ -38,12 +63,6 @@ function saveConfig(data: any) {
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 
-// Read logs
-function getLogs() {
-  if (!existsSync(LOGS_PATH)) return [];
-  return JSON.parse(readFileSync(LOGS_PATH, 'utf8'));
-}
-
 // API Routes
 app.get('/api/config', (req, res) => {
   res.json(getConfig());
@@ -54,8 +73,40 @@ app.post('/api/config', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/logs', (req, res) => {
-  res.json(getLogs());
+app.get('/api/logs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM emitidas ORDER BY id DESC');
+    const logs = result.rows.map((r: any) => ({
+      prestadorNif: r.prestador_nif,
+      nome: r.nome,
+      numeroFactura: r.numero_factura,
+      valor: r.valor,
+      data: r.data,
+      localPrestacao: r.local_prestacao,
+      descricao: r.descricao,
+      pdfPath: r.pdf_path,
+      timestamp: r.timestamp
+    }));
+    res.json(logs);
+  } catch (e) {
+    console.error('Erro ao ler logs:', e);
+    res.json([]);
+  }
+});
+
+app.post('/api/logs', async (req, res) => {
+  try {
+    const l = req.body;
+    await pool.query(
+      `INSERT INTO emitidas (prestador_nif, nome, numero_factura, valor, data, local_prestacao, descricao, pdf_path, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [l.prestadorNif, l.nome, l.numeroFactura, l.valor, l.data, l.localPrestacao, l.descricao, l.pdfPath, l.timestamp]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Erro ao guardar log:', e);
+    res.status(500).json({ error: 'Erro ao guardar' });
+  }
 });
 
 app.get('/api/pdf/:nif/:numero', (req, res) => {
