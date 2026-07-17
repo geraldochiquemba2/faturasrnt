@@ -263,6 +263,15 @@ async function emitirFactura(
 ): Promise<FacturaEmitida | null> {
   let page: any = null;
   try {
+    // Clean downloads folder before starting
+    if (fs.existsSync(DOWNLOAD_DIR)) {
+      const oldFiles = fs.readdirSync(DOWNLOAD_DIR).filter(f => f.endsWith('.pdf'));
+      for (const f of oldFiles) {
+        try { fs.unlinkSync(path.join(DOWNLOAD_DIR, f)); } catch {}
+      }
+      if (oldFiles.length > 0) console.log(`[${prestador.nif}] Limpou ${oldFiles.length} PDF(s) antigos`);
+    }
+
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
 
@@ -788,6 +797,11 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
     };
     await setupDownload(page);
 
+    // Record files before download
+    const filesBefore = fs.existsSync(DOWNLOAD_DIR) ? fs.readdirSync(DOWNLOAD_DIR).filter(f => f.endsWith('.pdf')) : [];
+    const timesBefore: Record<string, number> = {};
+    filesBefore.forEach(f => { timesBefore[f] = fs.statSync(path.join(DOWNLOAD_DIR, f)).mtimeMs; });
+
     // Clicar "Acções" na primeira linha
     await page.evaluate(() => {
       const rows = document.querySelectorAll('table tbody tr, .p-datatable-tbody tr');
@@ -849,7 +863,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
       });
     }
     
-    await sleep(1500);
+    await sleep(2500);
 
     // Verificar todas as tabs abertas
     const pages = await page.browser().pages();
@@ -870,31 +884,19 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
     await sleep(1000);
 
     // Verificar pasta downloads do projecto E pasta Downloads do user
-    let dlFiles = fs.readdirSync(DOWNLOAD_DIR).filter(f => f.endsWith('.pdf'));
+    let dlFiles = fs.existsSync(DOWNLOAD_DIR) ? fs.readdirSync(DOWNLOAD_DIR).filter(f => f.endsWith('.pdf')) : [];
     
-    // Se não encontrou no projecto, procurar na pasta Downloads do user
-    if (dlFiles.length === 0) {
-      const userDlDir = path.join('C:\\Users\\geral\\Downloads');
-      if (fs.existsSync(userDlDir)) {
-        const userFiles = fs.readdirSync(userDlDir).filter(f => f.endsWith('.pdf'));
-        for (const f of userFiles) {
-          const src = path.join(userDlDir, f);
-          const safeNum = numeroFactura.replace(/[^a-zA-Z0-9]/g, '_');
-          const newName = `${prestador.nif}_${safeNum}.pdf`;
-          const dest = path.join(DOWNLOAD_DIR, newName);
-          fs.copyFileSync(src, dest);
-          console.log(`[${prestador.nif}] ✓ PDF copiado: ${newName}`);
-        }
-        dlFiles = fs.readdirSync(DOWNLOAD_DIR).filter(f => f.endsWith('.pdf'));
-      }
-    }
+    // Find NEW files (not present before download, or modified after)
+    let newFiles = dlFiles.filter(f => !timesBefore[f] || fs.statSync(path.join(DOWNLOAD_DIR, f)).mtimeMs > timesBefore[f]);
+    
+    if (newFiles.length === 0) newFiles = dlFiles;
+    
+    console.log(`[${prestador.nif}] PDFs antes: ${filesBefore.length}, agora: ${dlFiles.length}, novos: ${newFiles.length}`);
 
-    console.log(`[${prestador.nif}] PDFs na pasta downloads: ${dlFiles.length}`);
-
-    // Renomear PDF com número da factura
+    // Renomear PDF com número da factura - use NEW files only
     try {
-      if (dlFiles.length > 0) {
-        const latest = dlFiles.sort((a, b) => fs.statSync(path.join(DOWNLOAD_DIR, b)).mtimeMs - fs.statSync(path.join(DOWNLOAD_DIR, a)).mtimeMs)[0];
+      if (newFiles.length > 0) {
+        const latest = newFiles.sort((a, b) => fs.statSync(path.join(DOWNLOAD_DIR, b)).mtimeMs - fs.statSync(path.join(DOWNLOAD_DIR, a)).mtimeMs)[0];
         const safeNum = numeroFactura.replace(/[^a-zA-Z0-9]/g, '_');
         const newName = `${prestador.nif}_${safeNum}.pdf`;
         const oldPath = path.join(DOWNLOAD_DIR, latest);
