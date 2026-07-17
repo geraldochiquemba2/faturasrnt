@@ -515,15 +515,10 @@
         if (!l) return;
         var safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
         var nome = (l.nome || l.prestadorNif).replace(/[^a-zA-Z0-9]/g, '_');
-        var pdfUrl = baseUrl + '/api/pdf/' + l.prestadorNif + '/' + safeNum;
+        var downloadUrl = baseUrl + '/api/download/' + l.prestadorNif + '/' + safeNum + '?nome=' + encodeURIComponent(nome || l.prestadorNif);
         setTimeout(function() {
-          var a = document.createElement('a');
-          a.href = pdfUrl;
-          a.download = nome + '_' + safeNum + '.pdf';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }, idx * 500);
+          window.open(downloadUrl, '_self');
+        }, idx * 1000);
       });
     }
 
