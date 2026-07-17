@@ -456,7 +456,7 @@
 
     function loadHistorico() {
       fetch('/api/logs').then(function(r) { return r.json(); }).then(function(logs) {
-        allLogs = logs.reverse();
+        allLogs = logs;
         renderHistorico(allLogs);
       });
     }
