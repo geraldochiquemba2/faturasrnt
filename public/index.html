@@ -324,9 +324,6 @@
     function loadPrestadores() {
       fetch('/api/config').then(function(r) { return r.json(); }).then(function(config) {
         globalConfig = config;
-        if (config.groqApiKey) {
-          document.getElementById('groqKey').value = config.groqApiKey;
-        }
         var dd = document.getElementById('nifDropdownList');
         dd.innerHTML = '';
         config.prestadores.forEach(function(p) {

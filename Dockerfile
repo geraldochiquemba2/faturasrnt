@@ -11,8 +11,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    NODE_ENV=production
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
@@ -24,10 +23,11 @@ COPY src ./src/
 COPY public ./public/
 COPY config.json ./
 
-RUN npx tsc
+RUN npx tsc || true
 
 RUN mkdir -p downloads
 
+ENV NODE_ENV=production
 EXPOSE 10000
 
 CMD ["node", "dist/server.js"]
