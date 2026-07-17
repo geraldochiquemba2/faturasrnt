@@ -292,9 +292,9 @@ app.get('/api/pdf/:nif/:numero', async (req, res) => {
   // Try DB first
   if (pool) {
     try {
-      const safeNum = req.params.numero.replace(/[^a-zA-Z0-9]/g, '_');
+      const safeNum = req.params.numero.replace(/[^a-zA-Z0-9]/g, '');
       const result = await pool.query(
-        'SELECT pdf_data FROM emitidas WHERE prestador_nif = $1 AND REPLACE(REPLACE(REPLACE(REPLACE(numero_factura, \'-\', \'\'), \'.\', \'\'), \'/\', \'\'), \' \', \'\') = $2 AND pdf_data IS NOT NULL ORDER BY id DESC LIMIT 1',
+        "SELECT pdf_data FROM emitidas WHERE prestador_nif = $1 AND regexp_replace(COALESCE(numero_factura, ''), '[^a-zA-Z0-9]', '', 'g') = $2 AND pdf_data IS NOT NULL ORDER BY id DESC LIMIT 1",
         [req.params.nif, safeNum]
       );
       if (result.rows[0]?.pdf_data) {
