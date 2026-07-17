@@ -138,12 +138,7 @@
           <input type="date" id="histDateFrom" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
           <input type="date" id="histDateTo" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
         </div>
-        <div style="overflow-x:auto">
-          <table>
-            <thead><tr><th>Prestador</th><th>Nº Factura</th><th>Valor</th><th>Data</th><th>Local</th><th>PDF</th></tr></thead>
-            <tbody id="historicoBody"></tbody>
-          </table>
-        </div>
+        <div id="historicoList"></div>
       </div>
     </div>
   </div>
@@ -461,12 +456,12 @@
     }
 
     function renderHistorico(logs) {
-      var tbody = document.getElementById('historicoBody');
+      var container = document.getElementById('historicoList');
       if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>Nenhuma factura encontrada</p></td></tr>';
+        container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">Nenhuma factura encontrada</div>';
         return;
       }
-      tbody.innerHTML = logs.map(function(l) {
+      container.innerHTML = logs.map(function(l) {
         var safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
         var nome = l.nome || '';
         if (!nome && globalConfig) {
@@ -483,14 +478,18 @@
             hora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
           }
         }
-        return '<tr><td><strong>' + (nome || l.prestadorNif) + '</strong><br><span style="color:#94a3b8;font-size:11px">' + l.prestadorNif + '</span></td>' +
-          '<td style="font-family:monospace;font-size:12px">' + l.numeroFactura + '</td>' +
-          '<td>' + (l.valor ? l.valor.toLocaleString('pt') : 0) + ' Kz</td>' +
-          '<td>' + l.data + '<br><span style="color:#94a3b8;font-size:11px">' + hora + '</span></td>' +
-          '<td>' + (l.localPrestacao || '-') + '</td>' +
-          '<td style="white-space:nowrap"><a href="/api/pdf/' + l.prestadorNif + '/' + safeNum + '" target="_blank" style="color:#3b82f6;text-decoration:none;font-weight:500">Ver</a>' +
-          (l.pdfPath ? ' <a href="/api/pdf/' + l.prestadorNif + '/' + safeNum + '" download="' + (l.pdfPath || '') + '" style="display:inline-block;padding:3px 8px;background:#16a34a;color:#fff;border-radius:4px;font-size:11px;font-weight:600;text-decoration:none;margin-left:6px">Baixar</a>' : '') +
-          '</td></tr>';
+        var pdfBtns = '<a href="/api/pdf/' + l.prestadorNif + '/' + safeNum + '" target="_blank" style="color:#3b82f6;text-decoration:none;font-weight:500">Ver</a>';
+        if (l.pdfPath) pdfBtns += ' <a href="/api/pdf/' + l.prestadorNif + '/' + safeNum + '" download="' + (l.pdfPath || '') + '" style="display:inline-block;padding:3px 8px;background:#16a34a;color:#fff;border-radius:4px;font-size:11px;font-weight:600;text-decoration:none;margin-left:6px">Baixar</a>';
+        return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:10px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>' + (nome || l.prestadorNif) + '</strong><span style="color:#6b7280;font-size:12px">' + pdfBtns + '</span></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px">' +
+          '<div><span style="color:#94a3b8">Factura:</span> <span style="font-family:monospace">' + (l.numeroFactura || '-') + '</span></div>' +
+          '<div><span style="color:#94a3b8">Valor:</span> <strong>' + (l.valor ? l.valor.toLocaleString('pt') : 0) + ' Kz</strong></div>' +
+          '<div><span style="color:#94a3b8">Data:</span> ' + (l.data || '-') + ' ' + hora + '</div>' +
+          '<div><span style="color:#94a3b8">NIF:</span> <span style="font-size:11px">' + l.prestadorNif + '</span></div>' +
+          '<div><span style="color:#94a3b8">Local:</span> ' + (l.localPrestacao || '-') + '</div>' +
+          '<div><span style="color:#94a3b8">Descrição:</span> ' + (l.descricao || '-') + '</div>' +
+          '</div></div>';
       }).join('');
     }
 
