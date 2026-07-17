@@ -53,7 +53,27 @@ interface FacturaEmitida {
 }
 
 function loadConfig(): Config {
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+
+  // Merge passwords from env var: PRESTADORES_PASSWORDS=000255073HO034:sUcThwHXTD,...
+  if (process.env.PRESTADORES_PASSWORDS) {
+    const pwMap: Record<string, string> = {};
+    process.env.PRESTADORES_PASSWORDS.split(',').forEach((entry: string) => {
+      const [nif, pw] = entry.split(':');
+      if (nif && pw) pwMap[nif] = pw;
+    });
+    config.prestadores = config.prestadores.map((p: any) => ({
+      ...p,
+      password: pwMap[p.nif] || ''
+    }));
+  }
+
+  // groqApiKey from env var
+  if (process.env.GROQ_API_KEY) {
+    config.groqApiKey = process.env.GROQ_API_KEY;
+  }
+
+  return config;
 }
 
 function loadLog(): FacturaEmitida[] {

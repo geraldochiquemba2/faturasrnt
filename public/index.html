@@ -529,12 +529,7 @@
       fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          groqApiKey: document.getElementById('groqKey').value,
-          chromePath: document.getElementById('chromePath').value,
-          valorMinimo: parseInt(document.getElementById('valorMin').value),
-          valorMaximo: parseInt(document.getElementById('valorMax').value)
-        })
+        body: JSON.stringify({})
       }).then(function() { alert('Configurações guardadas!'); });
     }
 

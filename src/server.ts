@@ -74,7 +74,27 @@ function saveLogLocal(entry: any) {
 // Read config
 function getConfig() {
   if (!existsSync(CONFIG_PATH)) return { prestadores: [], adquirente: {} };
-  return JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+  const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+
+  // Merge passwords from env var: PRESTADORES_PASSWORDS=000255073HO034:sUcThwHXTD,...
+  if (process.env.PRESTADORES_PASSWORDS) {
+    const pwMap: Record<string, string> = {};
+    process.env.PRESTADORES_PASSWORDS.split(',').forEach((entry: string) => {
+      const [nif, pw] = entry.split(':');
+      if (nif && pw) pwMap[nif] = pw;
+    });
+    config.prestadores = config.prestadores.map((p: any) => ({
+      ...p,
+      password: pwMap[p.nif] || ''
+    }));
+  }
+
+  // groqApiKey from env var
+  if (process.env.GROQ_API_KEY) {
+    config.groqApiKey = process.env.GROQ_API_KEY;
+  }
+
+  return config;
 }
 
 // Write config
@@ -90,7 +110,13 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/config', (req, res) => {
-  saveConfig(req.body);
+  // Only allow updating non-sensitive fields (referencia, adquirente)
+  const config = getConfig();
+  const allowed = { ...req.body };
+  delete allowed.prestadores;
+  delete allowed.groqApiKey;
+  Object.assign(config, allowed);
+  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
   res.json({ success: true });
 });
 

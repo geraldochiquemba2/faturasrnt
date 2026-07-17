@@ -3,5 +3,12 @@ dist
 screenshots
 chrome-profile-*
 .env
+secrets.env
 *.log
 .git
+downloads
+src/diagnose*.ts
+src/test_*.ts
+src/debug_*.ts
+src/extract-names.ts
+src/auto-emitir.ts
