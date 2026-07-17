@@ -236,6 +236,7 @@ app.get('/api/logs', async (req, res) => {
     const result = await pool.query('SELECT * FROM emitidas ORDER BY id DESC');
     const baseUrl = req.protocol + '://' + req.get('host');
     const logs = result.rows.map((r: any) => ({
+      id: r.id,
       prestadorNif: r.prestador_nif,
       nome: r.nome,
       numeroFactura: r.numero_factura,
@@ -274,6 +275,16 @@ app.post('/api/logs', async (req, res) => {
   } catch (e: any) {
     console.error('Erro ao guardar log:', e.message || e);
     res.status(500).json({ error: 'Erro ao guardar', detail: e.message || String(e) });
+  }
+});
+
+app.delete('/api/logs/:id', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'Sem DB' });
+  try {
+    await pool.query('DELETE FROM emitidas WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 
