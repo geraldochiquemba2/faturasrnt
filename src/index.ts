@@ -2,10 +2,8 @@ import puppeteer from 'puppeteer-core';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const CONFIG_PATH = path.resolve('config.json');
 const DOWNLOAD_DIR = path.resolve('downloads');
 const SCREENSHOTS_DIR = path.resolve('screenshots');
-const LOG_PATH = path.resolve('emitidas.json');
 
 interface Config {
   adquirente: { nif: string; nome: string; contacto: string };
@@ -53,14 +51,22 @@ interface FacturaEmitida {
 }
 
 function loadConfig(): Config {
-  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
-
-  // groqApiKey from env var
-  if (process.env.GROQ_API_KEY) {
-    config.groqApiKey = process.env.GROQ_API_KEY;
-  }
-
-  return config;
+  return {
+    adquirente: { nif: '5410778197', nome: 'REDE NACIONAL DE TRANSPORTE DE ELECTRICIDADE', contacto: '923636157' },
+    prestadores: [],
+    chromePath: '',
+    valorMinimo: 50000,
+    valorMaximo: 250000,
+    groqApiKey: process.env.GROQ_API_KEY || '',
+    referencia: {
+      localPrestacao: 'SE Cachiungo',
+      descricao: 'Servicos de limpeza a SE Cachiungo',
+      tipoOperacao: 'Prestação de serviço (geral)',
+      notas: '',
+      quantidade: 1,
+      valor: 0,
+    }
+  };
 }
 
 async function loadConfigWithPasswords(): Promise<Config> {
@@ -80,8 +86,10 @@ async function loadConfigWithPasswords(): Promise<Config> {
     if (remote.prestadores && remote.prestadores.length > 0) {
       config.prestadores = remote.prestadores;
     }
+    if (remote.adquirente) config.adquirente = remote.adquirente;
+    if (remote.referencia) config.referencia = { ...config.referencia, ...remote.referencia };
   } catch (e) {
-    console.log('[index] Sem acesso ao servidor, a usar config.json local');
+    console.log('[index] Sem acesso ao servidor, a usar dados por defeito');
   }
 
   return config;

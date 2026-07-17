@@ -36,7 +36,7 @@ const pool = useDB ? new Pool({
 }) : null;
 
 async function initDB() {
-  if (!pool) { console.log('⚠ Sem DATABASE_URL — a usar emitidas.json'); return; }
+  if (!pool) { console.log('⚠ Sem DATABASE_URL — a usar dados por defeito'); return; }
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS emitidas (
@@ -63,6 +63,13 @@ async function initDB() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS config_data (
+        key TEXT PRIMARY KEY,
+        value JSONB NOT NULL
+      )
+    `);
+
     const existing = await pool.query('SELECT COUNT(*) FROM prestadores');
     if (parseInt(existing.rows[0].count) === 0) {
       const prestadores = [
@@ -86,6 +93,33 @@ async function initDB() {
       console.log('✓ 13 prestadores inseridos na base de dados');
     }
 
+    const cfgExisting = await pool.query("SELECT COUNT(*) FROM config_data");
+    if (parseInt(cfgExisting.rows[0].count) === 0) {
+      await pool.query("INSERT INTO config_data (key, value) VALUES ('adquirente', $1)", [JSON.stringify({
+        nif: '5410778197',
+        nome: 'REDE NACIONAL DE TRANSPORTE DE ELECTRICIDADE',
+        contacto: '923636157'
+      })]);
+      await pool.query("INSERT INTO config_data (key, value) VALUES ('referencia', $1)", [JSON.stringify({
+        localPrestacao: 'SE Cachiungo',
+        descricao: 'Servicos de limpeza a SE Cachiungo',
+        tipoOperacao: 'Prestação de serviço (geral)',
+        notas: '',
+        quantidade: 1,
+        valor: 0,
+        precoUnitario: 0,
+        desconto: 0,
+        iva: 0,
+        impostoSelo: 0,
+        iec: 0,
+        retencaoFonte: 0,
+        taxaRetencao: '',
+        dataEmissao: '',
+        numeroFactura: ''
+      })]);
+      console.log('✓ Config padrão inserida na base de dados');
+    }
+
     console.log('✓ Base de dados Neon inicializada');
   } catch (e) {
     console.error('Erro ao inicializar Neon:', e);
@@ -105,6 +139,7 @@ function saveLogLocal(entry: any) {
 
 // Cached prestadores from DB
 let cachedPrestadores: { nif: string; password: string; nome: string }[] = [];
+let cachedConfig: any = null;
 
 async function loadPrestadoresFromDB() {
   if (!pool) return;
@@ -117,18 +152,32 @@ async function loadPrestadoresFromDB() {
   }
 }
 
+async function loadConfigFromDB() {
+  if (!pool) return;
+  try {
+    const adq = await pool.query("SELECT value FROM config_data WHERE key = 'adquirente'");
+    const ref = await pool.query("SELECT value FROM config_data WHERE key = 'referencia'");
+    cachedConfig = {
+      adquirente: adq.rows[0]?.value || { nif: '', nome: '', contacto: '' },
+      referencia: ref.rows[0]?.value || {},
+      prestadores: []
+    };
+    console.log('✓ Config carregada da base de dados');
+  } catch (e) {
+    console.error('Erro ao carregar config:', e);
+  }
+}
+
 // Read config
 function getConfig() {
-  if (!existsSync(CONFIG_PATH)) return { prestadores: [], adquirente: {} };
-  const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+  const config: any = cachedConfig || { adquirente: {}, referencia: {}, prestadores: [] };
 
   // Merge passwords from DB cache
-  if (cachedPrestadores.length > 0) {
-    config.prestadores = config.prestadores.map((p: any) => {
-      const dbP = cachedPrestadores.find((x) => x.nif === p.nif);
-      return { ...p, password: dbP ? dbP.password : '' };
-    });
-  }
+  config.prestadores = cachedPrestadores.map((p) => ({
+    nif: p.nif,
+    nome: p.nome,
+    password: p.password
+  }));
 
   // groqApiKey from env var
   if (process.env.GROQ_API_KEY) {
@@ -139,10 +188,15 @@ function getConfig() {
 }
 
 // Write config
-function saveConfig(data: any) {
-  const config = getConfig();
-  Object.assign(config, data);
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+async function saveConfig(data: any) {
+  if (!pool) return;
+  if (data.adquirente) {
+    await pool.query("UPDATE config_data SET value = $1 WHERE key = 'adquirente'", [JSON.stringify(data.adquirente)]);
+  }
+  if (data.referencia) {
+    await pool.query("UPDATE config_data SET value = $1 WHERE key = 'referencia'", [JSON.stringify(data.referencia)]);
+  }
+  cachedConfig = { ...cachedConfig, ...data };
 }
 
 // API Routes
@@ -150,14 +204,8 @@ app.get('/api/config', (req, res) => {
   res.json(getConfig());
 });
 
-app.post('/api/config', (req, res) => {
-  // Only allow updating non-sensitive fields (referencia, adquirente)
-  const config = getConfig();
-  const allowed = { ...req.body };
-  delete allowed.prestadores;
-  delete allowed.groqApiKey;
-  Object.assign(config, allowed);
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+app.post('/api/config', async (req, res) => {
+  await saveConfig(req.body);
   res.json({ success: true });
 });
 
@@ -332,7 +380,7 @@ ${text}`;
               tipoOperacao: extracted.tipoOperacao || 'Prestação de serviço (geral)',
               notas: config.referencia?.notas || ''
             };
-            writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+            await saveConfig({ referencia: config.referencia });
             res.json(extracted);
           } else {
             res.status(400).json({ error: 'Não foi possível extrair dados. Resposta: ' + content.substring(0, 200) });
@@ -355,10 +403,10 @@ ${text}`;
 });
 
 // Guardar referência manualmente
-app.post('/api/referencia', (req, res) => {
+app.post('/api/referencia', async (req, res) => {
   const config = getConfig();
   config.referencia = { ...config.referencia, ...req.body };
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  await saveConfig({ referencia: config.referencia });
   res.json({ success: true });
 });
 
@@ -524,7 +572,7 @@ app.post('/api/emitir-facturas', async (req, res) => {
       dataEmissao: f.dataEmissao || '',
       numeroFactura: f.numeroFactura || ''
     };
-    writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+    await saveConfig({ referencia: config.referencia });
 
     try {
       await new Promise<void>((resolve, reject) => {
@@ -640,7 +688,7 @@ app.post('/api/emitir', async (req, res) => {
 });
 
 // Start server
-initDB().then(() => loadPrestadoresFromDB()).then(() => {
+initDB().then(() => loadPrestadoresFromDB()).then(() => loadConfigFromDB()).then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Servidor iniciado em http://localhost:${PORT}\n`);
   });
