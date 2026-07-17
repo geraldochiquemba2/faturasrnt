@@ -137,7 +137,7 @@
           <input type="text" id="histSearch" placeholder="Pesquisar por nome, NIF, factura, local..." oninput="filterHistorico()" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
           <div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px">De:</span><input type="date" id="histDateFrom" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"></div>
           <div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px">Até:</span><input type="date" id="histDateTo" onchange="filterHistorico()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"></div>
-          <button onclick="sendSelectedWhatsApp()" style="padding:9px 16px;background:#25d366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Enviar selecionadas</button>
+          <button onclick="downloadSelected()" style="padding:9px 16px;background:#1e293b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Baixar selecionadas</button>
         </div>
         <div id="historicoList"></div>
       </div>
@@ -497,27 +497,31 @@
       }).join('');
     }
 
-    function sendSelectedWhatsApp() {
+    function downloadSelected() {
       var checks = document.querySelectorAll('.hist-check:checked');
       if (checks.length === 0) { alert('Selecione pelo menos uma factura'); return; }
       var baseUrl = window.location.origin;
-      var lines = [];
-      checks.forEach(function(ch) {
+      checks.forEach(function(ch, idx) {
         var l = allLogs[parseInt(ch.dataset.index)];
         if (!l) return;
         var safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
-        var nome = l.nome || l.prestadorNif;
+        var nome = (l.nome || l.prestadorNif).replace(/[^a-zA-Z0-9]/g, '_');
         var pdfUrl = baseUrl + '/api/pdf/' + l.prestadorNif + '/' + safeNum;
-        lines.push('Factura ' + (l.numeroFactura || '') + ' - ' + nome + ' - ' + (l.valor ? l.valor.toLocaleString('pt') : 0) + ' Kz\n' + pdfUrl);
+        setTimeout(function() {
+          var a = document.createElement('a');
+          a.href = pdfUrl;
+          a.download = nome + '_' + safeNum + '.pdf';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }, idx * 500);
       });
-      var msg = encodeURIComponent(lines.join('\n\n'));
-      window.open('https://wa.me/?text=' + msg, '_blank');
     }
 
     function updateWhatsAppBtn() {
       var count = document.querySelectorAll('.hist-check:checked').length;
-      var btn = document.querySelector('[onclick="sendSelectedWhatsApp()"]');
-      if (btn) btn.textContent = count > 0 ? 'Enviar selecionadas (' + count + ')' : 'Enviar selecionadas';
+      var btn = document.querySelector('[onclick="downloadSelected()"]');
+      if (btn) btn.textContent = count > 0 ? 'Baixar selecionadas (' + count + ')' : 'Baixar selecionadas';
     }
 
     function filterHistorico() {
