@@ -194,8 +194,8 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
       }
 
       try { await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {}); } catch {}
-      await sleep(3000);
-      console.log(`[${nif}] After portal wait...`);
+    await sleep(200);
+    console.log(`[${nif}] After portal wait...`);
 
       // Screenshot após clicar "Portal do Contribuinte"
       try { await page.screenshot({ path: `screenshots/login_${nif}_portal${attempt}.png`, fullPage: true }); } catch {}
@@ -203,13 +203,13 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
 
       const nifInput = await page.$('input[type="text"], input[type="number"]');
       console.log(`[${nif}] NIF input found: ${!!nifInput}`);
-      if (nifInput) { await nifInput.click({ clickCount: 3 }); await nifInput.type(nif, { delay: 20 }); }
-      await sleep(300);
+      if (nifInput) { await nifInput.click({ clickCount: 3 }); await nifInput.type(nif, { delay: 5 }); }
+      await sleep(100);
 
       const passInput = await page.$('input[type="password"]');
       console.log(`[${nif}] Pass input found: ${!!passInput}`);
-      if (passInput) { await passInput.click({ clickCount: 3 }); await passInput.type(password, { delay: 20 }); }
-      await sleep(300);
+      if (passInput) { await passInput.click({ clickCount: 3 }); await passInput.type(password, { delay: 5 }); }
+      await sleep(100);
       console.log(`[${nif}] Inputs filled, taking before_submit screenshot...`);
 
       // Screenshot antes de submeter
@@ -224,7 +224,7 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
       console.log(`[${nif}] Iniciar Sessão clicked`);
 
       for (let i = 0; i < 10; i++) {
-        await sleep(2000);
+        await sleep(1000);
         const url = page.url();
         console.log(`[${nif}] URL actual: ${url}`);
         if (!url.includes('auth')) {
@@ -365,10 +365,10 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
 
     // Navegar para emitir
     await page.goto('https://quiosqueagt.minfin.gov.ao/facturacao-eletronica/emitir-factura', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    const dropdownFound = await waitForAny(page, ['p-dropdown'], 15000);
+    const dropdownFound =     await waitForAny(page, ['p-dropdown'], 15000);
     if (!dropdownFound) {
       console.log(`[${prestador.nif}] ⚠ p-dropdown não encontrado, tentando again...`);
-      await sleep(3000);
+      await sleep(1000);
       await waitForAny(page, ['p-dropdown'], 15000);
     }
 
@@ -383,9 +383,9 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
 
     // 1. Tipo documento = Factura
     await page.click('p-dropdown').catch(() => {});
-    await sleep(2000);
+    await sleep(500);
     await page.waitForSelector('.p-dropdown-panel', { timeout: 5000 }).catch(() => {});
-    await sleep(1000);
+    await sleep(300);
 
     let tipoSelected = await page.evaluate(() => {
       const panel = document.querySelector('.p-dropdown-panel');
@@ -402,19 +402,19 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
 
     if (!tipoSelected) {
       await page.keyboard.press('Escape');
-      await sleep(300);
+      await sleep(150);
       await page.click('p-dropdown').catch(() => {});
-      await sleep(2000);
-      await page.keyboard.press('ArrowDown');
-      await sleep(200);
-      await page.keyboard.press('Enter');
       await sleep(500);
+      await page.keyboard.press('ArrowDown');
+      await sleep(100);
+      await page.keyboard.press('Enter');
+      await sleep(200);
       tipoSelected = 'via-teclado';
     }
     
     await page.screenshot({ path: `screenshots/${prestador.nif}_tipo_doc.png`, fullPage: true });
     console.log(`[${prestador.nif}] ✓ Tipo: ${tipoSelected}`);
-    await sleep(1000);
+    await sleep(300);
 
     // 2. NIF adquirente
     await page.evaluate((nif: string) => {
@@ -428,7 +428,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     }, config.adquirente.nif);
-    await sleep(500);
+    await sleep(200);
     console.log(`[${prestador.nif}] ✓ NIF: ${config.adquirente.nif}`);
 
     // 3. Lupa
@@ -438,7 +438,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         if (btn.querySelector('svg') && btn.textContent?.trim() === '') { btn.click(); break; }
       }
     });
-    await sleep(2000);
+    await sleep(500);
     console.log(`[${prestador.nif}] ✓ Lupa`);
 
     // 4. Nome
@@ -455,7 +455,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     }, config.adquirente.nome);
-    await sleep(500);
+    await sleep(200);
     console.log(`[${prestador.nif}] ✓ Nome`);
 
     // 5. Data - usar data do utilizador ou data de hoje
@@ -475,7 +475,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         (input as HTMLElement).blur();
       }
     }, dataServico);
-    await sleep(500);
+    await sleep(200);
     console.log(`[${prestador.nif}] ✓ Data: ${dataServico}`);
 
     // 6. Local de prestação
@@ -488,7 +488,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         input.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }, referencia.localPrestacao);
-    await sleep(500);
+    await sleep(200);
     console.log(`[${prestador.nif}] ✓ Local: ${referencia.localPrestacao}`);
 
     // 7. Adicionar item - clicar "Adicionar a lista" para abrir painel
@@ -496,7 +496,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
       const btns = Array.from(document.querySelectorAll('button'));
       for (const btn of btns) { if (btn.textContent?.includes('Adicionar a lista')) { btn.click(); break; } }
     });
-    await sleep(3000);
+    await sleep(800);
     await page.screenshot({ path: `screenshots/${prestador.nif}_panel_open.png`, fullPage: true });
 
     // 8a. Tipo Operação = Prestação de serviço (geral) - sempre
@@ -516,7 +516,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     });
-    await sleep(2000);
+    await sleep(500);
 
     let selected = await page.evaluate(() => {
       const panels = document.querySelectorAll('.p-dropdown-panel');
@@ -536,7 +536,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
 
     if (!selected) {
       await page.keyboard.press('Escape');
-      await sleep(300);
+      await sleep(150);
       await page.evaluate(() => {
         const labels = document.querySelectorAll('label');
         for (const label of labels) {
@@ -552,17 +552,17 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
           }
         }
       });
-      await sleep(1500);
+      await sleep(400);
       await page.keyboard.press('ArrowDown');
-      await sleep(300);
+      await sleep(100);
       await page.keyboard.press('Enter');
-      await sleep(500);
+      await sleep(200);
       selected = 'via-teclado';
     }
 
     await page.screenshot({ path: `screenshots/${prestador.nif}_tipo_selected.png`, fullPage: true });
     console.log(`[${prestador.nif}] ✓ Tipo de Operação: ${selected}`);
-    await sleep(1000);
+    await sleep(300);
 
     // 8b. Descrição - procurar textarea pelo label
     await page.evaluate((desc: string) => {
@@ -597,7 +597,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     }, referencia.descricao);
-    await sleep(500);
+    await sleep(200);
     console.log(`[${prestador.nif}] ✓ Descrição`);
 
     // 8c. Preço unitário - portal espera valor × 100 (divide por 100 internamente)
@@ -635,13 +635,13 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
     if (priceInput && priceInput.asElement()) {
       const el = priceInput.asElement()!;
       await el.click({ clickCount: 3 });
-      await sleep(200);
+      await sleep(100);
       await page.keyboard.press('Backspace');
-      await sleep(200);
-      await el.type(priceStr, { delay: 80 });
-      await sleep(300);
+      await sleep(100);
+      await el.type(priceStr, { delay: 30 });
+      await sleep(100);
       await page.keyboard.press('Tab');
-      await sleep(500);
+      await sleep(200);
       console.log(`[${prestador.nif}] ✓ Preço typed: ${priceStr}`);
     } else {
       console.log(`[${prestador.nif}] ✗ Preço input NÃO encontrado`);
@@ -658,12 +658,12 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         const box = await inp.boundingBox();
         if (box && box.y > 0) {
           await inp.click({ clickCount: 3 });
-          await sleep(200);
+          await sleep(100);
           await page.keyboard.press('Backspace');
-          await sleep(200);
-          await inp.type(String(qty), { delay: 50 });
+          await sleep(100);
+          await inp.type(String(qty), { delay: 30 });
           await page.keyboard.press('Tab');
-          await sleep(300);
+          await sleep(100);
           break;
         }
       }
@@ -683,7 +683,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     });
-    await sleep(800);
+    await sleep(300);
     console.log(`[${prestador.nif}] ✓ Imposto OFF`);
 
     await page.screenshot({ path: `screenshots/${prestador.nif}_before_add.png`, fullPage: true });
@@ -701,7 +701,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     });
-    await sleep(3000);
+    await sleep(1000);
 
     // Screenshot após click
     await page.screenshot({ path: `screenshots/${prestador.nif}_after_add.png`, fullPage: true });
@@ -734,7 +734,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
           }
         }
       });
-      await sleep(3000);
+      await sleep(1000);
     }
 
     // 9. Submeter
@@ -743,7 +743,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
       const subBtn = btns.find(b => b.offsetParent !== null && b.textContent?.includes('Submeter'));
       if (subBtn) (subBtn as HTMLElement).click();
     });
-    await sleep(4000);
+    await sleep(1500);
 
     // 10. Verificar sucesso
     const sucesso = await page.evaluate(() => document.body.innerText.includes('Sucesso'));
@@ -757,7 +757,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
       const btns = Array.from(document.querySelectorAll('button'));
       for (const btn of btns) { if (btn.textContent?.trim() === 'Não') { btn.click(); break; } }
     });
-    await sleep(1500);
+    await sleep(500);
 
     // Extrair número da factura
     const numeroFactura = await page.evaluate(() => {
@@ -771,7 +771,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
     // 11. Download - ir directamente à consulta e baixar o PDF mais recente
     await page.goto('https://quiosqueagt.minfin.gov.ao/facturacao-eletronica/consulta', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await waitForAny(page, ['table tbody tr', '.p-datatable-tbody tr'], 10000);
-    await sleep(2000);
+    await sleep(500);
     await page.screenshot({ path: `screenshots/${prestador.nif}_consulta.png`, fullPage: true });
 
     // Configurar download CDP em todas as tabs
@@ -800,7 +800,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     });
-    await sleep(1500);
+    await sleep(400);
     await page.screenshot({ path: `screenshots/${prestador.nif}_acoes.png`, fullPage: true });
 
     // Clicar "Ver documento"
@@ -813,7 +813,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
         }
       }
     });
-    await sleep(5000);
+    await sleep(1500);
     await page.screenshot({ path: `screenshots/${prestador.nif}_documento.png`, fullPage: true });
 
     // Procurar botão de download no modal (ícone de seta para baixo)
@@ -850,7 +850,7 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
       });
     }
     
-    await sleep(5000);
+    await sleep(1500);
 
     // Verificar todas as tabs abertas
     const pages = await page.browser().pages();
@@ -862,13 +862,13 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
       if (url.includes('.pdf') || url.includes('download') || url.includes('documento')) {
         if (p !== page) {
           await setupDownload(p);
-          await sleep(3000);
+          await sleep(1000);
           await p.close();
         }
       }
     }
 
-    await sleep(3000);
+    await sleep(1000);
 
     // Verificar pasta downloads do projecto E pasta Downloads do user
     let dlFiles = fs.readdirSync(DOWNLOAD_DIR).filter(f => f.endsWith('.pdf'));
@@ -984,7 +984,7 @@ async function main() {
       log.push(resultado);
       saveLog([resultado]);
     }
-    await sleep(1000);
+    await sleep(300);
   }
 
   await browser.close();
