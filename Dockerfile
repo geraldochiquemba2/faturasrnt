@@ -1,5 +1,7 @@
 FROM node:20-slim
 
+ARG CACHEBUST=1721218000
+
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-ipafont-gothic \

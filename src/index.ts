@@ -187,17 +187,22 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
       });
       console.log(`[${nif}] Portal do Contribuinte clicked`);
       await sleep(2000);
+      console.log(`[${nif}] sleep done, taking screenshot...`);
 
       // Screenshot após clicar "Portal do Contribuinte"
       await page.screenshot({ path: `screenshots/login_${nif}_portal${attempt}.png`, fullPage: true });
+      console.log(`[${nif}] screenshot done, looking for NIF input...`);
 
       const nifInput = await page.$('input[type="text"], input[type="number"]');
+      console.log(`[${nif}] NIF input found: ${!!nifInput}`);
       if (nifInput) { await nifInput.click({ clickCount: 3 }); await nifInput.type(nif, { delay: 20 }); }
       await sleep(300);
 
       const passInput = await page.$('input[type="password"]');
+      console.log(`[${nif}] Pass input found: ${!!passInput}`);
       if (passInput) { await passInput.click({ clickCount: 3 }); await passInput.type(password, { delay: 20 }); }
       await sleep(300);
+      console.log(`[${nif}] Inputs filled, taking before_submit screenshot...`);
 
       // Screenshot antes de submeter
       await page.screenshot({ path: `screenshots/login_${nif}_before_submit${attempt}.png`, fullPage: true });
