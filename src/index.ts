@@ -180,16 +180,12 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
       try { await page.screenshot({ path: `screenshots/login_${nif}_attempt${attempt}.png`, fullPage: true }); } catch { /* ignore */ }
 
       console.log(`[${nif}] Looking for Portal do Contribuinte button...`);
-      const btns = await page.$$('button') || [];
-      console.log(`[${nif}] Found ${btns.length} buttons`);
-      for (const btn of btns) {
-        try {
-          const text = await btn.evaluate((el: any) => el.textContent?.trim() || '');
-          if (text.includes('Portal do Contribuinte')) { await btn.click(); break; }
-        } catch (e: any) {
-          console.log(`[${nif}] Button evaluate error: ${e.message}`);
-        }
-      }
+      await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const portalBtn = btns.find(b => b.textContent?.includes('Portal do Contribuinte'));
+        if (portalBtn) (portalBtn as HTMLElement).click();
+      });
+      console.log(`[${nif}] Portal do Contribuinte clicked`);
       await sleep(2000);
 
       // Screenshot após clicar "Portal do Contribuinte"
@@ -207,15 +203,12 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
       await page.screenshot({ path: `screenshots/login_${nif}_before_submit${attempt}.png`, fullPage: true });
 
       console.log(`[${nif}] Looking for Iniciar Sessão button...`);
-      const allBtns = await page.$$('button') || [];
-      for (const btn of allBtns) {
-        try {
-          const text = await btn.evaluate((el: any) => el.textContent?.trim() || '');
-          if (text.includes('Iniciar Sessão')) { await btn.click(); break; }
-        } catch (e: any) {
-          console.log(`[${nif}] Button evaluate error: ${e.message}`);
-        }
-      }
+      await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const loginBtn = btns.find(b => b.textContent?.includes('Iniciar Sessão'));
+        if (loginBtn) (loginBtn as HTMLElement).click();
+      });
+      console.log(`[${nif}] Iniciar Sessão clicked`);
 
       for (let i = 0; i < 10; i++) {
         await sleep(2000);
@@ -732,12 +725,11 @@ Responde APENAS com o JSON ex: {"valor": 2000} ou {"local": "Luanda", "valor": 5
     }
 
     // 9. Submeter
-    const subBtns = await page.$$('button');
-    for (const btn of subBtns) {
-      const text = await btn.evaluate((el: any) => el.textContent?.trim());
-      const visible = await btn.evaluate((el: any) => el.offsetParent !== null);
-      if (visible && text?.includes('Submeter')) { await btn.click(); break; }
-    }
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const subBtn = btns.find(b => b.offsetParent !== null && b.textContent?.includes('Submeter'));
+      if (subBtn) (subBtn as HTMLElement).click();
+    });
     await sleep(4000);
 
     // 10. Verificar sucesso
