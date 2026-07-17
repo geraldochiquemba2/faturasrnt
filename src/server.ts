@@ -26,29 +26,48 @@ app.use(express.static(join(__dirname, '..', 'public')));
 const CONFIG_PATH = join(__dirname, '..', 'config.json');
 
 // Neon PostgreSQL
-const pool = new Pool({
+const LOGS_PATH = join(__dirname, '..', 'emitidas.json');
+const useDB = !!process.env.DATABASE_URL;
+
+const pool = useDB ? new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined
-});
+  ssl: { rejectUnauthorized: false }
+}) : null;
 
 async function initDB() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS emitidas (
-      id SERIAL PRIMARY KEY,
-      prestador_nif TEXT NOT NULL,
-      nome TEXT,
-      numero_factura TEXT,
-      valor REAL,
-      data TEXT,
-      local_prestacao TEXT,
-      descricao TEXT,
-      pdf_path TEXT,
-      pdf_url TEXT,
-      timestamp TEXT,
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `);
-  console.log('✓ Base de dados inicializada');
+  if (!pool) { console.log('⚠ Sem DATABASE_URL — a usar emitidas.json'); return; }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS emitidas (
+        id SERIAL PRIMARY KEY,
+        prestador_nif TEXT NOT NULL,
+        nome TEXT,
+        numero_factura TEXT,
+        valor REAL,
+        data TEXT,
+        local_prestacao TEXT,
+        descricao TEXT,
+        pdf_path TEXT,
+        pdf_url TEXT,
+        timestamp TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✓ Base de dados Neon inicializada');
+  } catch (e) {
+    console.error('Erro ao inicializar Neon:', e);
+  }
+}
+
+function getLogsLocal() {
+  if (!existsSync(LOGS_PATH)) return [];
+  return JSON.parse(readFileSync(LOGS_PATH, 'utf8'));
+}
+
+function saveLogLocal(entry: any) {
+  const logs = getLogsLocal();
+  logs.push(entry);
+  writeFileSync(LOGS_PATH, JSON.stringify(logs, null, 2));
 }
 
 // Read config
@@ -75,6 +94,7 @@ app.post('/api/config', (req, res) => {
 });
 
 app.get('/api/logs', async (req, res) => {
+  if (!pool) { res.json(getLogsLocal()); return; }
   try {
     const result = await pool.query('SELECT * FROM emitidas ORDER BY id DESC');
     const baseUrl = req.protocol + '://' + req.get('host');
@@ -93,16 +113,21 @@ app.get('/api/logs', async (req, res) => {
     res.json(logs);
   } catch (e) {
     console.error('Erro ao ler logs:', e);
-    res.json([]);
+    res.json(getLogsLocal());
   }
 });
 
 app.post('/api/logs', async (req, res) => {
+  const l = req.body;
+  const baseUrl = req.protocol + '://' + req.get('host');
+  const safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
+  const pdfUrl = l.pdfPath ? baseUrl + '/api/pdf/' + l.prestadorNif + '/' + safeNum : '';
+  if (!pool) {
+    saveLogLocal({ ...l, pdfUrl });
+    res.json({ success: true, pdfUrl });
+    return;
+  }
   try {
-    const l = req.body;
-    const baseUrl = req.protocol + '://' + req.get('host');
-    const safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
-    const pdfUrl = l.pdfPath ? baseUrl + '/api/pdf/' + l.prestadorNif + '/' + safeNum : '';
     await pool.query(
       `INSERT INTO emitidas (prestador_nif, nome, numero_factura, valor, data, local_prestacao, descricao, pdf_path, pdf_url, timestamp)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,

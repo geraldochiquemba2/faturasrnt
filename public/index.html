@@ -234,7 +234,7 @@
             '<div><label style="font-size:11px;color:#475569">Local *</label><input type="text" class="row-local" data-nif="' + p.nif + '" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
             '<div><label style="font-size:11px;color:#475569">Valor (AKZ) *</label><input type="text" class="row-valor" data-nif="' + p.nif + '" value="" placeholder="0,00" onkeydown="handleValorKeydown(event)" onblur="handleValorBlur(this)" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
             '<div><label style="font-size:11px;color:#475569">Quantidade</label><input type="number" class="row-qtd" data-nif="' + p.nif + '" value="1" min="1" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
-            '<div><label style="font-size:11px;color:#475569">Data</label><input type="date" class="row-data" data-nif="' + p.nif + '" value="' + today + '" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
+            '<div><label style="font-size:11px;color:#475569">Data</label><input type="date" class="row-data" data-nif="' + p.nif + '" value="' + today + '" max="' + new Date().toISOString().split('T')[0] + '" style="width:100%;padding:8px;background:#fff;border:1px solid #1e293b;border-radius:6px;color:#1e293b;font-size:13px;margin-top:2px"></div>' +
           '</div>';
         container.appendChild(card);
       });
