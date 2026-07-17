@@ -21,7 +21,6 @@ RUN npm install
 COPY tsconfig.json ./
 COPY src ./src/
 COPY public ./public/
-COPY config.json ./
 
 RUN npx tsc || true
 
