@@ -201,7 +201,13 @@ async function saveConfig(data: any) {
 
 // API Routes
 app.get('/api/config', (req, res) => {
-  res.json(getConfig());
+  const config = getConfig();
+  const safeConfig = {
+    adquirente: config.adquirente,
+    referencia: config.referencia,
+    prestadores: config.prestadores.map((p: any) => ({ nif: p.nif, nome: p.nome })),
+  };
+  res.json(safeConfig);
 });
 
 app.post('/api/config', async (req, res) => {
@@ -363,7 +369,7 @@ ${text}`;
     const groqReq = https.request(options, (groqRes) => {
       let data = '';
       groqRes.on('data', (chunk) => { data += chunk; });
-      groqRes.on('end', () => {
+      groqRes.on('end', async () => {
         try {
           const parsed = JSON.parse(data);
           if (parsed.error) {
@@ -487,7 +493,7 @@ ${text}`;
     const groqReq = https.request(options, (groqRes) => {
       let data = '';
       groqRes.on('data', (chunk) => { data += chunk; });
-      groqRes.on('end', () => {
+      groqRes.on('end', async () => {
         try {
           const parsed = JSON.parse(data);
           if (parsed.error) {
