@@ -43,6 +43,7 @@ async function initDB() {
       local_prestacao TEXT,
       descricao TEXT,
       pdf_path TEXT,
+      pdf_url TEXT,
       timestamp TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
@@ -76,6 +77,7 @@ app.post('/api/config', (req, res) => {
 app.get('/api/logs', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM emitidas ORDER BY id DESC');
+    const baseUrl = req.protocol + '://' + req.get('host');
     const logs = result.rows.map((r: any) => ({
       prestadorNif: r.prestador_nif,
       nome: r.nome,
@@ -85,6 +87,7 @@ app.get('/api/logs', async (req, res) => {
       localPrestacao: r.local_prestacao,
       descricao: r.descricao,
       pdfPath: r.pdf_path,
+      pdfUrl: r.pdf_url || (r.pdf_path ? baseUrl + '/api/pdf/' + r.prestador_nif + '/' + r.numero_factura?.replace(/[^a-zA-Z0-9]/g, '_') : ''),
       timestamp: r.timestamp
     }));
     res.json(logs);
@@ -97,12 +100,15 @@ app.get('/api/logs', async (req, res) => {
 app.post('/api/logs', async (req, res) => {
   try {
     const l = req.body;
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const safeNum = (l.numeroFactura || '').replace(/[^a-zA-Z0-9]/g, '_');
+    const pdfUrl = l.pdfPath ? baseUrl + '/api/pdf/' + l.prestadorNif + '/' + safeNum : '';
     await pool.query(
-      `INSERT INTO emitidas (prestador_nif, nome, numero_factura, valor, data, local_prestacao, descricao, pdf_path, timestamp)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [l.prestadorNif, l.nome, l.numeroFactura, l.valor, l.data, l.localPrestacao, l.descricao, l.pdfPath, l.timestamp]
+      `INSERT INTO emitidas (prestador_nif, nome, numero_factura, valor, data, local_prestacao, descricao, pdf_path, pdf_url, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [l.prestadorNif, l.nome, l.numeroFactura, l.valor, l.data, l.localPrestacao, l.descricao, l.pdfPath, pdfUrl, l.timestamp]
     );
-    res.json({ success: true });
+    res.json({ success: true, pdfUrl });
   } catch (e) {
     console.error('Erro ao guardar log:', e);
     res.status(500).json({ error: 'Erro ao guardar' });
