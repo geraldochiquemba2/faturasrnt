@@ -163,68 +163,83 @@ async function login(page: any, nif: string, password: string): Promise<boolean>
   console.log(`[${nif}] A fazer login...`);
 
   for (let attempt = 0; attempt < 7; attempt++) {
-    await page.goto('https://quiosqueagt.minfin.gov.ao/auth', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await waitForAny(page, ['button', 'input'], 8000);
+    try {
+      console.log(`[${nif}] Attempt ${attempt}: navigating to auth...`);
+      await page.goto('https://quiosqueagt.minfin.gov.ao/auth', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      console.log(`[${nif}] Page loaded, waiting for elements...`);
+      await waitForAny(page, ['button', 'input'], 8000);
 
-    // Desactivar autofill do browser
-    await page.evaluate(() => {
-      document.querySelectorAll('input').forEach(inp => {
-        inp.setAttribute('autocomplete', 'off');
-      });
-    });
-
-    // Screenshot para debug
-    try { await page.screenshot({ path: `screenshots/login_${nif}_attempt${attempt}.png`, fullPage: true }); } catch { /* ignore */ }
-
-    const btns = await page.$$('button');
-    for (const btn of btns) {
-      const text = await btn.evaluate((el: any) => el.textContent?.trim());
-      if (text?.includes('Portal do Contribuinte')) { await btn.click(); break; }
-    }
-    await sleep(2000);
-
-    // Screenshot após clicar "Portal do Contribuinte"
-    await page.screenshot({ path: `screenshots/login_${nif}_portal${attempt}.png`, fullPage: true });
-
-    const nifInput = await page.$('input[type="text"], input[type="number"]');
-    if (nifInput) { await nifInput.click({ clickCount: 3 }); await nifInput.type(nif, { delay: 20 }); }
-    await sleep(300);
-
-    const passInput = await page.$('input[type="password"]');
-    if (passInput) { await passInput.click({ clickCount: 3 }); await passInput.type(password, { delay: 20 }); }
-    await sleep(300);
-
-    // Screenshot antes de submeter
-    await page.screenshot({ path: `screenshots/login_${nif}_before_submit${attempt}.png`, fullPage: true });
-
-    const allBtns = await page.$$('button');
-    for (const btn of allBtns) {
-      const text = await btn.evaluate((el: any) => el.textContent?.trim());
-      if (text?.includes('Iniciar Sessão')) { await btn.click(); break; }
-    }
-
-    for (let i = 0; i < 10; i++) {
-      await sleep(2000);
-      const url = page.url();
-      console.log(`[${nif}] URL actual: ${url}`);
-      if (!url.includes('auth')) {
-        console.log(`[${nif}] ✓ Login OK`);
-        return true;
-      }
-      // Screenshot se ainda na auth após 4s
-      if (i === 2) {
-        await page.screenshot({ path: `screenshots/login_${nif}_waiting${attempt}.png`, fullPage: true });
-        // Verificar mensagem de erro
-        const errorMsg = await page.evaluate(() => {
-          const alerts = document.querySelectorAll('.alert, .error, .message, [class*="error"], [class*="alert"], .p-toast-message');
-          return Array.from(alerts).map(a => a.textContent?.trim()).join(' | ');
+      // Desactivar autofill do browser
+      await page.evaluate(() => {
+        document.querySelectorAll('input').forEach(inp => {
+          inp.setAttribute('autocomplete', 'off');
         });
-        if (errorMsg) console.log(`[${nif}] Erro na página: ${errorMsg}`);
+      });
+
+      // Screenshot para debug
+      try { await page.screenshot({ path: `screenshots/login_${nif}_attempt${attempt}.png`, fullPage: true }); } catch { /* ignore */ }
+
+      console.log(`[${nif}] Looking for Portal do Contribuinte button...`);
+      const btns = await page.$$('button') || [];
+      console.log(`[${nif}] Found ${btns.length} buttons`);
+      for (const btn of btns) {
+        try {
+          const text = await btn.evaluate((el: any) => el.textContent?.trim() || '');
+          if (text.includes('Portal do Contribuinte')) { await btn.click(); break; }
+        } catch (e: any) {
+          console.log(`[${nif}] Button evaluate error: ${e.message}`);
+        }
       }
-      if (i === 3 && attempt < 6) {
-        console.log(`[${nif}] Retry login...`);
-        break;
+      await sleep(2000);
+
+      // Screenshot após clicar "Portal do Contribuinte"
+      await page.screenshot({ path: `screenshots/login_${nif}_portal${attempt}.png`, fullPage: true });
+
+      const nifInput = await page.$('input[type="text"], input[type="number"]');
+      if (nifInput) { await nifInput.click({ clickCount: 3 }); await nifInput.type(nif, { delay: 20 }); }
+      await sleep(300);
+
+      const passInput = await page.$('input[type="password"]');
+      if (passInput) { await passInput.click({ clickCount: 3 }); await passInput.type(password, { delay: 20 }); }
+      await sleep(300);
+
+      // Screenshot antes de submeter
+      await page.screenshot({ path: `screenshots/login_${nif}_before_submit${attempt}.png`, fullPage: true });
+
+      console.log(`[${nif}] Looking for Iniciar Sessão button...`);
+      const allBtns = await page.$$('button') || [];
+      for (const btn of allBtns) {
+        try {
+          const text = await btn.evaluate((el: any) => el.textContent?.trim() || '');
+          if (text.includes('Iniciar Sessão')) { await btn.click(); break; }
+        } catch (e: any) {
+          console.log(`[${nif}] Button evaluate error: ${e.message}`);
+        }
       }
+
+      for (let i = 0; i < 10; i++) {
+        await sleep(2000);
+        const url = page.url();
+        console.log(`[${nif}] URL actual: ${url}`);
+        if (!url.includes('auth')) {
+          console.log(`[${nif}] ✓ Login OK`);
+          return true;
+        }
+        if (i === 2) {
+          await page.screenshot({ path: `screenshots/login_${nif}_waiting${attempt}.png`, fullPage: true });
+          const errorMsg = await page.evaluate(() => {
+            const alerts = document.querySelectorAll('.alert, .error, .message, [class*="error"], [class*="alert"], .p-toast-message');
+            return Array.from(alerts).map(a => a.textContent?.trim()).join(' | ');
+          });
+          if (errorMsg) console.log(`[${nif}] Erro na página: ${errorMsg}`);
+        }
+        if (i === 3 && attempt < 6) {
+          console.log(`[${nif}] Retry login...`);
+          break;
+        }
+      }
+    } catch (e: any) {
+      console.log(`[${nif}] Attempt ${attempt} error: ${e.message}`);
     }
   }
 
