@@ -329,6 +329,48 @@ app.get('/api/pdf/:nif/:numero', async (req, res) => {
   }
 });
 
+// Force download endpoint (iOS compatible)
+app.get('/api/download/:nif/:numero', async (req, res) => {
+  const safeNum = req.params.numero.replace(/[^a-zA-Z0-9]/g, '');
+  let pdfBuffer: Buffer | null = null;
+
+  if (pool) {
+    try {
+      const result = await pool.query(
+        "SELECT pdf_data, numero_factura FROM emitidas WHERE prestador_nif = $1 AND regexp_replace(COALESCE(numero_factura, ''), '[^a-zA-Z0-9]', '', 'g') = $2 AND pdf_data IS NOT NULL ORDER BY id DESC LIMIT 1",
+        [req.params.nif, safeNum]
+      );
+      if (result.rows[0]?.pdf_data) {
+        pdfBuffer = Buffer.from(result.rows[0].pdf_data, 'base64');
+      }
+    } catch (e) {
+      console.error('Erro ao buscar PDF para download:', e);
+    }
+  }
+
+  if (!pdfBuffer) {
+    const downloadsDir = join(__dirname, '..', 'downloads');
+    if (existsSync(downloadsDir)) {
+      const files = readdirSync(downloadsDir).filter((f: string) => f.startsWith(req.params.nif) && f.endsWith('.pdf'));
+      const specific = files.find((f: string) => f.includes(safeNum));
+      if (specific) {
+        pdfBuffer = readFileSync(join(downloadsDir, specific));
+      } else if (files.length > 0) {
+        const latest = files.sort((a: string, b: string) => statSync(join(downloadsDir, b)).mtimeMs - statSync(join(downloadsDir, a)).mtimeMs)[0];
+        pdfBuffer = readFileSync(join(downloadsDir, latest));
+      }
+    }
+  }
+
+  if (!pdfBuffer) return res.status(404).json({ error: 'PDF not found' });
+
+  const nome = req.query.nome || req.params.nif;
+  const fileName = nome + '_' + req.params.numero + '.pdf';
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + fileName + '"');
+  res.send(pdfBuffer);
+});
+
 app.get('/api/pdf/:nif', (req, res) => {
   const downloadsDir = join(__dirname, '..', 'downloads');
   if (!existsSync(downloadsDir)) return res.status(404).json({ error: 'PDF not found' });
@@ -742,12 +784,26 @@ app.post('/api/emitir', async (req, res) => {
 initDB().then(() => loadPrestadoresFromDB()).then(() => loadConfigFromDB()).then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Servidor iniciado em http://localhost:${PORT}\n`);
+    startSelfPing();
   });
 }).catch((e) => {
   console.error('Erro ao iniciar DB:', e);
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Servidor iniciado (sem DB) em http://localhost:${PORT}\n`);
+    startSelfPing();
   });
 });
+
+function startSelfPing() {
+  const url = process.env.SITE_URL || 'https://faturasrnt.onrender.com';
+  setInterval(() => {
+    https.get(url, (res) => {
+      console.log(`[Keep-Alive] Ping ${url} → ${res.statusCode}`);
+    }).on('error', (e) => {
+      console.error(`[Keep-Alive] Erro: ${e.message}`);
+    });
+  }, 10 * 60 * 1000);
+  console.log(`[Keep-Alive] Ping a cada 10 min em ${url}`);
+}
 
 export default app;
